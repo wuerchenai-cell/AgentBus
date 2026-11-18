@@ -1828,9 +1828,9 @@ class Launcher:
         if action == 'home':
             self.goal_text.focus_set()
 
-    def _page_heading(self, parent, title: str, subtitle: str) -> None:
+    def _page_heading(self, parent, title: str, subtitle: str, *, spacing: int = 12) -> None:
         header = ttk.Frame(parent)
-        header.pack(fill='x', pady=(0, self._px(12)))
+        header.pack(fill='x', pady=(0, self._px(spacing)))
         ttk.Label(header, text=title, style='Title.TLabel').pack(anchor='w')
         hint = ttk.Label(header, text=subtitle, style='Hint.TLabel', wraplength=760)
         hint.pack(anchor='w', pady=(self._px(4), 0))
@@ -1907,6 +1907,10 @@ class Launcher:
                    padding=(8, 3)).pack(side='right', padx=(0, 8))
         self.task_forest_note_var = tk.StringVar(value='尚无任务树。保存团队后发布任务。')
         self.task_forest_status_var = tk.StringVar(value='选择叶子查看工作留痕')
+        # Reserve the board's full width for the controls before allocating the
+        # height left over to the tree and its scrollable detail pane.
+        actions = ttk.Frame(overview)
+        actions.pack(fill='x', pady=(0, 4))
         panes = ttk.Frame(overview)
         panes.pack(fill='both', expand=True)
         panes.rowconfigure(0, weight=1)
@@ -1932,8 +1936,6 @@ class Launcher:
         self.task_tree.bind('<<TreeviewSelect>>', self._select_task_leaf)
         ttk.Label(right, textvariable=self.task_forest_status_var,
                   style='Section.TLabel').pack(anchor='w', pady=(0, 6))
-        actions = ttk.Frame(right)
-        actions.pack(side='bottom', fill='x', pady=(6, 0))
         self.task_leaf_member_var = tk.StringVar()
         ttk.Label(actions, text='接手成员', style='Hint.TLabel').pack(side='left', padx=(0, 4))
         self.task_leaf_member_box = ttk.Combobox(actions, textvariable=self.task_leaf_member_var,
@@ -2118,12 +2120,11 @@ class Launcher:
         self._select_task_leaf()
 
     def _build_config(self, parent=None) -> None:
-        card = ttk.LabelFrame(parent or self.root, text=" 项目与团队 ",
-                              style="Card.TLabelframe", padding=(14, 8, 14, 12))
-        card.pack(fill="both", expand=True, pady=(0, 4))
+        card = ttk.Frame(parent or self.root, padding=(12, 4))
+        card.pack(fill="both", expand=True)
 
         row = ttk.Frame(card)
-        row.pack(fill="x", pady=(0, 8))
+        row.pack(fill="x", pady=(0, 4))
         ttk.Label(row, text="项目目录", width=10).pack(side="left")
         self.ws_var = tk.StringVar(value=initial_workspace(Path.cwd()))
         self.ws_var.trace_add('write', self._on_team_draft_changed)
@@ -2134,7 +2135,7 @@ class Launcher:
         ttk.Button(row, text="打开目录", command=self._open_ws).pack(side="left", padx=(6, 0))
 
         output_row = ttk.Frame(card)
-        output_row.pack(fill="x", pady=(0, 8))
+        output_row.pack(fill="x", pady=(0, 4))
         ttk.Label(output_row, text="业务产出目录", width=10).pack(side="left")
         self.output_var = tk.StringVar()
         self.output_var.trace_add('write', self._on_team_draft_changed)
@@ -2146,11 +2147,11 @@ class Launcher:
         output_hint = ttk.Label(card,
                                 text="控制目录保存计划、成员信箱和记忆；业务产出可放在另一块磁盘。",
                                 style="Hint.TLabel", wraplength=760)
-        output_hint.pack(anchor='w', pady=(0, 8))
+        output_hint.pack(anchor='w', pady=(0, 4))
         self._register_wrap(output_hint)
 
         row2 = ttk.Frame(card)
-        row2.pack(fill="x", pady=(0, 8))
+        row2.pack(fill="x", pady=(0, 4))
         ttk.Label(row2, text="组长", width=10).pack(side="left")
         self.director_var = tk.StringVar()
         self.director_var.trace_add('write', self._on_team_draft_changed)
@@ -2160,7 +2161,7 @@ class Launcher:
         self.director_box.pack(side="left")
         hint = ttk.Label(card, text="负责拆分任务、派发和汇总；不增加权限，接受同伴评审",
                          style="Hint.TLabel", wraplength=760)
-        hint.pack(anchor='w', pady=(0, 12))
+        hint.pack(anchor='w', pady=(0, 4))
         self._register_wrap(hint)
 
         row3 = ttk.Frame(card)
@@ -2178,11 +2179,21 @@ class Launcher:
                                    command=self.workers_canvas.yview)
         workers_x = ttk.Scrollbar(workers_view, orient='horizontal',
                                    command=self.workers_canvas.xview)
+
+        def update_horizontal_scroll(first, last):
+            workers_x.set(first, last)
+            overflow = float(first) > 0 or float(last) < 1
+            if overflow == bool(workers_x.winfo_manager()):
+                return
+            if overflow:
+                workers_x.grid(row=1, column=0, sticky='ew')
+            else:
+                workers_x.grid_remove()
+
         self.workers_canvas.configure(yscrollcommand=workers_y.set,
-                                      xscrollcommand=workers_x.set)
+                                      xscrollcommand=update_horizontal_scroll)
         self.workers_canvas.grid(row=0, column=0, sticky='nsew')
         workers_y.grid(row=0, column=1, sticky='ns')
-        workers_x.grid(row=1, column=0, sticky='ew')
         workers_view.columnconfigure(0, weight=1)
         workers_view.rowconfigure(0, weight=1)
         self.workers_frame = ttk.Frame(self.workers_canvas)
@@ -2202,7 +2213,7 @@ class Launcher:
         ttk.Button(row4, text="添加 Agent", command=self._add_member).pack(side='left', padx=(8,0))
         # Reserve save/help before giving remaining height to member scrolling.
         # The actual ordinary EXE exposed clipping that withdrawn fixtures missed.
-        row4.pack(side='bottom', fill='x', pady=(8, 0))
+        row4.pack(side='bottom', fill='x', pady=(4, 0))
         row3.pack(fill='both', expand=True)
 
     def _build_goal(self, parent=None) -> None:
@@ -2256,6 +2267,7 @@ class Launcher:
         self.current_page = 'home'
         nb.bind('<<NotebookTabChanged>>', self._sync_navigation)
         self.content_frame.bind('<Configure>', self._refresh_wraplength)
+        self.pages['home'].configure(padding=(self._px(16), self._px(8)))
         self._build_home(self.pages['home'])
 
         # Source: user/group enterprise review, Codex, 2026-10-04.
@@ -2328,8 +2340,9 @@ class Launcher:
         # The team page carries two directory rows plus onboarding actions;
         # keep its outer inset compact so the member picker retains a usable
         # viewport at high DPI.
-        members.configure(padding=(self._px(12), self._px(6)))
-        self._page_heading(members, '项目与团队', '保存后按团队接入步骤操作；成员选择不表示当前会话已连接。')
+        members.configure(padding=(self._px(12), self._px(4)))
+        self._page_heading(members, '项目与团队',
+                           '保存后按团队接入步骤操作；成员选择不表示当前会话已连接。', spacing=4)
         members_footer = ttk.Frame(members)
         members_footer.pack(side='bottom', fill='x')
         members_bar = ttk.Frame(members_footer)
