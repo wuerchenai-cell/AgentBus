@@ -104,6 +104,18 @@ class SkillInstallTests(unittest.TestCase):
                         pass
                 self.assertEqual(locks.call_count, 2, 'one OS lock + one unlock; nested call uses same lock')
 
+    def test_safe_install_path_handles_trusted_root_alias(self):
+        from agentbus import skill_install as si
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            alias = root.with_name('SKILL~1')
+            canonical = si.canonical_path
+            with patch.object(si, 'canonical_path', side_effect=lambda path:
+                              root if path == alias else canonical(path)):
+                self.assertEqual(si.safe_install_path(alias, alias / 'SKILL.md'), root / 'SKILL.md')
+                with self.assertRaises(SkillInstallError):
+                    si.safe_install_path(alias, alias / '..' / 'other.md')
+
     def test_install_state_path_is_shared_across_packaged_and_desktop_processes(self):
         home = Path(r"C:\Users\test user")
         desktop_env = {"LOCALAPPDATA": str(home / "AppData" / "Local")}

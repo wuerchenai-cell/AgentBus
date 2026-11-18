@@ -219,11 +219,20 @@ def _atomic_write(path: Path, data: bytes) -> None:
 
 def safe_install_path(root: Path, target: Path) -> Path:
     """Trusted root may be relocated; its managed children must not be links."""
-    root = canonical_path(root)
+    requested_root = Path(os.path.abspath(Path(root).expanduser()))
+    if any(part.casefold() == '.workbuddy' for part in requested_root.parts):
+        raise SkillInstallError('安装目录指向 WorkBuddy 私有目录，已停止')
+    root = canonical_path(requested_root)
     if any(part.casefold() == '.workbuddy' for part in root.parts):
         raise SkillInstallError('安装目录指向 WorkBuddy 私有目录，已停止')
-    if not target.absolute().is_relative_to(root):
-        raise SkillInstallError(f'安装路径越出登记目录：{target}')
+    original_target = target
+    target = target.absolute()
+    if target.is_relative_to(requested_root):
+        # Only translate the trusted root spelling. Keep child links visible
+        # to the checks below instead of resolving the entire path first.
+        target = root / target.relative_to(requested_root)
+    if not target.is_relative_to(root) or '..' in target.relative_to(root).parts:
+        raise SkillInstallError(f'安装路径越出登记目录：{original_target}')
     current = target
     while current != root:
         attributes = getattr(current.lstat(), 'st_file_attributes', 0) if current.exists() else 0

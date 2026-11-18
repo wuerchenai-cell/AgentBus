@@ -20,6 +20,8 @@ _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+from tests.project_paths import host_project_root
+
 _TOOL = _ROOT / "tools" / "tree_capability_audit.py"
 
 
@@ -147,7 +149,9 @@ class CapabilityAuditTests(unittest.TestCase):
 
     # ---------- 真实工作区冒烟（只读，不依赖具体数值） ----------
     def test_real_workspace_smoke(self):
-        ws = next((p for p in [_ROOT, *_ROOT.parents] if (p / '.agentbus' / 'config.json').is_file()), None)
+        ws = host_project_root()
+        if ws is None:
+            self.skipTest("Real project capability audit requires explicit host scope")
         tree_path = ws / ".agentbus" / "task-tree.json"
         cfg_path = ws / ".agentbus" / "config.json"
         if not (tree_path.is_file() and cfg_path.is_file()):

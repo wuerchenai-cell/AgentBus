@@ -131,7 +131,11 @@ class WorkbenchVisibleLayouts(unittest.TestCase):
                     # Flexible page frames intentionally give space to their
                     # scrollable children; only controls need full request height.
                     if isinstance(widget, gui.tk.Canvas):
-                        self.assertGreaterEqual(widget.winfo_height(), 60)
+                        self.assertGreaterEqual(widget.winfo_height(), 60,
+                            f'window={root.winfo_geometry()}, requested={geometry}, '
+                            f'screen={root.winfo_screenwidth()}x{root.winfo_screenheight()}, '
+                            f'scaling={root.tk.call("tk", "scaling")}, '
+                            f'font={root.tk.call("font", "actual", gui.FONT)}')
                     elif not isinstance(widget, gui.ttk.Frame):
                         self.assertGreaterEqual(widget.winfo_height(), widget.winfo_reqheight())
                     else:

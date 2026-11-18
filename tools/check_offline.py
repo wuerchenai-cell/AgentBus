@@ -12,6 +12,7 @@ from contextlib import contextmanager
 import json
 import os
 import sys
+import tempfile
 import time
 import threading
 import unittest
@@ -30,6 +31,11 @@ HOST_TEST_IDS = (
     'test_formal_sync.TestFormalSync.test_formal_sync_on_live_manifest',
     'test_root_hygiene.RealProjectRootHygieneTests',
     'test_launcher_truth_check.RealWorkspaceTests',
+    'test_host_file_registration_check.RealWorkspaceTests',
+    'test_tree_capability_audit.CapabilityAuditTests.test_real_workspace_smoke',
+    'test_tree_structure_preflight.RealWorkspaceTests',
+    'test_skill_manifest_audit.ParseTests.test_real_project_skill_has_all_required_fields',
+    'test_skill_manifest_audit.ParseTests.test_real_project_skill_license_stays_unapproved_until_owner_decides',
     'test_tools_quality_gate.TestToolsQualityGate.test_host_full_tool_quality',
     'test_tools_quality_gate.TestToolsQualityGate.test_host_tools_help_invocation',
     'test_tools_quality_gate.TestToolsQualityGate.test_host_inject_jsdocs_module_callable',
@@ -81,6 +87,18 @@ def main(argv=None) -> int:
         from project_paths import host_project_root, host_source_root
         if host_project_root() is None or host_source_root() is None:
             parser.error('Host audits require explicit AGENTBUS_TEST_PROJECT_ROOT and AGENTBUS_TEST_SOURCE_ROOT')
+    # Python -X flags only apply to the current interpreter. The tests also
+    # launch Python scripts with redirected output containing Chinese text.
+    os.environ.setdefault('PYTHONUTF8', '1')
+    if os.name == 'nt':
+        temporary = tempfile.gettempdir()
+        canonical = str(Path(temporary).resolve(strict=True))
+        if canonical != temporary:
+            # Keep subprocess fixtures and the parent on the same spelling
+            # when Windows supplies an 8.3 alias for the user's temp path.
+            tempfile.tempdir = canonical
+            for name in ('TMPDIR', 'TEMP', 'TMP'):
+                os.environ[name] = canonical
     # Subprocess tests inherit cwd, not this interpreter's sys.path. Use the
     # same checkout for parent discovery and python -m agentbus children.
     os.chdir(ROOT)

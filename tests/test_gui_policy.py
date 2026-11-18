@@ -690,15 +690,15 @@ class GuiPolicyTests(unittest.TestCase):
             root.report_callback_exception = lambda *args: callback_errors.append(args)
             with tempfile.TemporaryDirectory() as temp, \
                  patch('agentbus.gui.initial_workspace', return_value=temp), \
-                 patch('agentbus.gui.detect_group_agents', return_value={}):
+                 patch.object(gui.Launcher, '_auto_detect'):
                 ui = Launcher(root)
                 cfg = load(Path(temp), create=True)
                 for index in range(60):
                     cfg.data['workers'][f'member-{index:02}'] = {
                         'kind': 'gui', 'enabled': True, 'executor_enabled': True,
                         'can_spawn': False, 'human_in_loop': True}
-                # Launcher schedules a real startup reload. Persist the fixture
-                # so that reload exercises the same 60-member configuration.
+                # The delayed startup reload resets the viewport to the top.
+                # Test the layout after loading the fixture once.
                 cfg = save(cfg)
                 ui._apply_cfg_to_ui(cfg)
                 ui._show_page('team')
@@ -726,7 +726,9 @@ class GuiPolicyTests(unittest.TestCase):
                 root.update()
                 last = ui.workers_frame.winfo_children()[-1]
                 self.assertLessEqual(last.winfo_rooty() + last.winfo_height(),
-                                     canvas.winfo_rooty() + canvas.winfo_height())
+                                     canvas.winfo_rooty() + canvas.winfo_height(),
+                                     f'view={canvas.yview()}, region={canvas.cget("scrollregion")}, '
+                                     f'window={root.winfo_geometry()}')
                 self.assertGreaterEqual(last.winfo_rooty(), canvas.winfo_rooty())
                 ui._show_page('home')
                 root.update()
@@ -803,7 +805,11 @@ class GuiPolicyTests(unittest.TestCase):
                                 if reached:
                                     break
                             self.assertTrue(reached, label)
-                        self.assertTrue(widget.winfo_ismapped(), label)
+                        self.assertTrue(widget.winfo_ismapped(),
+                            f'{label}: window={root.winfo_geometry()}, '
+                            f'screen={root.winfo_screenwidth()}x{root.winfo_screenheight()}, '
+                            f'parent={widget.master.winfo_geometry()}, '
+                            f'font={root.tk.call("font", "actual", gui.FONT)}')
                         self.assertGreaterEqual(widget.winfo_height(), widget.winfo_reqheight(), label)
                         self.assertLessEqual(widget.winfo_y() + widget.winfo_height(),
                                              widget.master.winfo_height(), label)

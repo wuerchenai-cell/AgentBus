@@ -25,6 +25,8 @@ _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+from tests.project_paths import host_project_root
+
 _TOOL = _ROOT / "tools" / "host_file_registration_check.py"
 
 
@@ -174,7 +176,9 @@ class RegistrationCheckTests(unittest.TestCase):
 
 class RealWorkspaceTests(unittest.TestCase):
     def test_real_workspace_gate_runs_and_is_self_consistent(self):
-        ws = next((p for p in [_ROOT, *_ROOT.parents] if (p / '.agentbus' / 'config.json').is_file()), None)
+        ws = host_project_root()
+        if ws is None:
+            self.skipTest("Real project registration requires explicit host scope")
         if not (ws / ".agentbus" / "workflow.json").is_file():
             self.skipTest("未找到真实 .agentbus/workflow.json，跳过")
         before = (ws / ".agentbus" / "workflow.json").read_bytes()

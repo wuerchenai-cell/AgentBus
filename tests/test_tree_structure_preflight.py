@@ -26,6 +26,8 @@ _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+from tests.project_paths import host_project_root
+
 _TOOL = _ROOT / "tools" / "tree_structure_preflight.py"
 
 
@@ -244,7 +246,9 @@ class CliTests(unittest.TestCase):
 @unittest.skipIf(tsp_truth is None, "无法导入真源校验器")
 class RealWorkspaceTests(unittest.TestCase):
     def test_real_tree_preflight_is_consistent(self):
-        ws = next((p for p in [_ROOT, *_ROOT.parents] if (p / '.agentbus' / 'config.json').is_file()), None)
+        ws = host_project_root()
+        if ws is None:
+            self.skipTest("Real project structure audit requires explicit host scope")
         tree_path = ws / ".agentbus" / "task-tree.json"
         if not tree_path.is_file():
             self.skipTest("未找到真实 .agentbus/task-tree.json，跳过")
@@ -257,7 +261,9 @@ class RealWorkspaceTests(unittest.TestCase):
         self.assertIn(code, (0, 1))
 
     def test_tool_does_not_rewrite_tree_when_candidate_is_clean(self):
-        ws = next((p for p in [_ROOT, *_ROOT.parents] if (p / '.agentbus' / 'config.json').is_file()), None)
+        ws = host_project_root()
+        if ws is None:
+            self.skipTest("Real project structure audit requires explicit host scope")
         tree_path = ws / ".agentbus" / "task-tree.json"
         if not tree_path.is_file():
             self.skipTest("未找到真实树，跳过")

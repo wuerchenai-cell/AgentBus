@@ -588,7 +588,7 @@ def _render_initial_onboard_workflow(cfg, target_root: Path) -> tuple[dict[str, 
     from .config import Config
     from .project_workflow import prepare_project_workflow
     with tempfile.TemporaryDirectory(prefix='agentbus-onboard-workflow-') as folder:
-        stage = Path(folder)
+        stage = Path(folder).resolve()
         control = stage / '.agentbus'
         control.mkdir()
         staged_cfg = Config(control / 'config.json', stage, copy.deepcopy(cfg.data))

@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 TOOL = ROOT / "tools" / "skill_manifest_audit.py"
+from tests.project_paths import host_project_root
 from tools import skill_manifest_audit as sma
 
 
@@ -29,7 +30,10 @@ class ParseTests(unittest.TestCase):
             self.assertIn(name, sma.REQUIRED_FIELDS)
 
     def test_real_project_skill_has_all_required_fields(self):
-        report = sma.audit(sma.SKILLS_ROOT)
+        workspace = host_project_root()
+        if workspace is None:
+            self.skipTest("Real project skill inventory requires explicit host scope")
+        report = sma.audit(workspace / ".codebuddy" / "skills")
         self.assertGreaterEqual(report["count"], 1, "项目内至少应有一个技能")
         for row in report["skills"]:
             self.assertEqual([], row["missing"], "%s 缺字段" % row["skill"])
@@ -37,7 +41,10 @@ class ParseTests(unittest.TestCase):
             self.assertEqual("", row["error"])
 
     def test_real_project_skill_license_stays_unapproved_until_owner_decides(self):
-        report = sma.audit(sma.SKILLS_ROOT)
+        workspace = host_project_root()
+        if workspace is None:
+            self.skipTest("Real project skill license requires explicit host scope")
+        report = sma.audit(workspace / ".codebuddy" / "skills")
         skill = next(row for row in report["skills"]
                      if row["skill"] == "agentbus-team")
         self.assertTrue(skill["needs_license_audit"])
@@ -128,9 +135,10 @@ class CliTests(unittest.TestCase):
             self.assertEqual(0, proc.returncode, proc.stderr)
 
     def test_json_output_is_machine_readable(self):
-        proc = subprocess.run([sys.executable, str(TOOL), "--json"],
-                              capture_output=True, text=True, encoding='utf-8',
-                              env={**os.environ, 'PYTHONUTF8': '1'})
+        with tempfile.TemporaryDirectory() as temp:
+            proc = subprocess.run([sys.executable, str(TOOL), "--skills-root", temp, "--json"],
+                                  capture_output=True, text=True, encoding='utf-8',
+                                  env={**os.environ, 'PYTHONUTF8': '1'})
         self.assertEqual(0, proc.returncode, proc.stderr)
         payload = json.loads(proc.stdout)
         for key in ("required_fields", "skills", "verdicts", "read_only"):
@@ -139,8 +147,14 @@ class CliTests(unittest.TestCase):
 
     def test_strict_output_is_utf8_under_legacy_console_encoding(self):
         env = {**os.environ, "PYTHONUTF8": "0", "PYTHONIOENCODING": "gbk"}
-        proc = subprocess.run([sys.executable, str(TOOL), "--strict"],
-                              capture_output=True, env=env)
+        with tempfile.TemporaryDirectory() as temp:
+            skill = Path(temp) / "demo" / "SKILL.md"
+            skill.parent.mkdir()
+            skill.write_text("---\nname: demo\ndescription: 兼容性检查\nlicense: 未登记\n"
+                             "allowed-tools: [Read]\ncompatibility: [offline]\n---\n",
+                             encoding="utf-8")
+            proc = subprocess.run([sys.executable, str(TOOL), "--skills-root", temp, "--strict"],
+                                  capture_output=True, env=env)
         self.assertEqual(1, proc.returncode)
         stdout = proc.stdout.decode("utf-8")
         stderr = proc.stderr.decode("utf-8", errors="replace")

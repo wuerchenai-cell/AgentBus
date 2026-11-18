@@ -184,13 +184,19 @@ class ReleaseIntegrity(unittest.TestCase):
         self.assertEqual(bundle.read_bytes(),b'previous package')
 
     def test_symlink_public_asset_is_rejected(self):
+        from agentbus.sharing import ShareError
+        from tools.export_source import SourceReleaseError
+
         license_path=self.checkout/'LICENSE'; license_path.unlink()
         target=self.root/'outside-license.txt'; target.write_bytes(b'external content')
         try: license_path.symlink_to(target)
         except OSError as exc: self.skipTest(f'symlink not supported by host: {exc.winerror if hasattr(exc,"winerror") else exc}')
         bundle=self.root/'成果/clean.zip';bundle.write_bytes(b'previous package')
-        with self.assertRaisesRegex(ValueError,'Links and reparse'):
+        with self.assertRaisesRegex(ShareError, '公开分发资源校验失败') as caught:
             deployer.atomic_zip(self.root,self.formal,bundle)
+        cause = caught.exception.__cause__
+        self.assertIsInstance(cause, SourceReleaseError)
+        self.assertIn('Links and reparse', str(cause))
         self.assertEqual(bundle.read_bytes(),b'previous package')
 
     def test_failed_rollback_preserves_old_binary_backup(self):

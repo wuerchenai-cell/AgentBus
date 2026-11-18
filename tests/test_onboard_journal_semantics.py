@@ -5,7 +5,11 @@ import hashlib
 import json
 import subprocess
 import sys
-from agentbus.onboarding_pack import auto_onboard_agent
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
+from agentbus.config import load
+from agentbus.onboarding_pack import _render_initial_onboard_workflow, auto_onboard_agent
 from tests.onboard_test_utils import OnboardFixture
 
 
@@ -56,6 +60,18 @@ class OnboardJournalSemanticsTests(OnboardFixture):
         with self.assertRaises(ValueError):
             auto_onboard_agent(self.root, 'new-peer')
         self.assertEqual(original, self.snapshot())
+
+    def test_initial_workflow_replaces_noncanonical_temporary_path(self):
+        with tempfile.TemporaryDirectory() as folder:
+            stage = Path(folder).resolve()
+            alias = stage / '..' / stage.name
+            with patch('agentbus.onboarding_pack.tempfile.TemporaryDirectory') as temporary:
+                temporary.return_value.__enter__.return_value = str(alias)
+                outputs, manifest = _render_initial_onboard_workflow(load(self.root), self.root.resolve())
+            entry = outputs['AGENTBUS.md']
+            self.assertNotIn(str(stage).encode('utf-8'), entry)
+            self.assertIn(str(self.root.resolve()).encode('utf-8'), entry)
+            self.assertEqual(manifest['files']['AGENTBUS.md'], hashlib.sha256(entry).hexdigest())
 
     def test_initial_workflow_recovery_for_existing_member_has_no_config_mutation(self):
         self.add_peer()
