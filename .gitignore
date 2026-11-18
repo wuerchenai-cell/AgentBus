@@ -1,0 +1,25 @@
+# Local projects, agent private stores, state and credentials
+.agentbus/
+.workbuddy/
+.codebuddy/
+.trae/
+.zcode/
+.opencode/
+.env
+.env.*
+auth.json
+mcp-agentbus.json
+pilots/
+build*/
+dist*/
+.release-build/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.exe
+*.zip
+*.log
+*.tmp
+*.bak
+.*lease*.json

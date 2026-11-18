@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "目标后续协调结果",
+  "type": "object",
+  "properties": {
+    "complete": { "type": "boolean" },
+    "summary": { "type": "string" },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "body": { "type": "string" },
+          "worker": { "type": "string" },
+          "result_to": { "type": "string" }
+        },
+        "required": ["title", "body", "worker", "result_to"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["complete", "summary", "tasks"],
+  "additionalProperties": false
+}

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "connector_id": "agentbus.codex-bridge",
+  "connector_version": "1.0.0",
+  "protocol_version": "agentbus-trigger/1",
+  "display_name": "Codex Host Bridge Connector",
+  "products": [
+    {
+      "product_id": "codex",
+      "vendor": "OpenAI",
+      "channels": ["stable"],
+      "os": ["windows", "darwin", "linux"],
+      "min_version": "1.0.0"
+    }
+  ],
+  "entry_kind": "host_bridge",
+  "execution_surface": "desktop_existing",
+  "transport": "in_host",
+  "asset_refs": [],
+  "install_actions": [],
+  "activation": {
+    "reload_required": false,
+    "entrypoint": "host_bridge"
+  },
+  "permission_requirements": [
+    "read_project",
+    "call_tool_bridge"
+  ],
+  "declared_capabilities": {
+    "can_identify_target": true,
+    "can_check_project": true,
+    "can_submit_existing": true,
+    "can_route_exact_id": true,
+    "can_detect_busy": true,
+    "host_queue_verified": true,
+    "atomic_target_submit": true,
+    "can_report_native_start": true,
+    "can_report_native_finish": true,
+    "can_reconcile": true,
+    "can_cancel_owned_turn": true,
+    "cold_start_verified": true,
+    "requires_visible_target": false,
+    "requires_manual_bootstrap": false
+  },
+  "docs_refs": [
+    "https://platform.openai.com/docs"
+  ],
+  "maintenance": {
+    "maintainer": "AgentBus Core",
+    "uninstall_steps": "In-host bridge requires no files to uninstall"
+  }
+}

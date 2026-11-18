@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'">
+  <title>AgentBus · 企业级多 Agent 协作工作台</title>
+  <link rel="stylesheet" href="app.css">
+  <script src="app.js" defer></script>
+  <script src="trigger_onboarding.js" defer></script>
+</head>
+<body>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+    <symbol id="i-tree" viewBox="0 0 24 24"><path d="M5 5h4v4H5zM15 3h4v4h-4zM15 10h4v4h-4zM15 17h4v4h-4zM9 7h3v12h3M12 5h3M12 12h3"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 1 7M4 4v6h6M12 7v5l3 2"/></symbol>
+    <symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M5 4v16M12 4v16M19 4v16M2 8h6M9 16h6M16 8h6"/><circle cx="5" cy="8" r="2"/><circle cx="12" cy="16" r="2"/><circle cx="19" cy="8" r="2"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7a8 8 0 1 0 0 10M20 3v5h-5"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24"><path d="M9 4H4v5M15 4h5v5M4 15v5h5M20 15v5h-5"/><rect x="8" y="8" width="8" height="8" rx="1"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10H3z"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8z"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="m9 15 6-6M8 16l-1 1a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0M16 8l1-1a4 4 0 0 1 6 6l-5 5a4 4 0 0 1-6 0"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  </defs></svg>
+
+  <div class="app-shell" id="appShell">
+    <aside class="sidebar" id="memberSidebar" aria-label="工作台导航与项目成员">
+      <div class="brand"><svg viewBox="0 0 48 48" class="brand-mark brand-bot" aria-hidden="true">
+        <ellipse class="brand-bot-shadow" cx="24" cy="43" rx="12" ry="2" fill="currentColor" opacity=".12"/>
+        <g class="brand-bot-body">
+          <g class="brand-bot-antenna"><path d="M24 13V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="24" cy="5" r="2.5" fill="#a7dce8"/></g>
+          <rect x="9" y="15" width="30" height="23" rx="9" fill="#27323e" stroke="#a9c5d7" stroke-width="1.4"/>
+          <path d="M8 25H5v6h3m32-6h3v6h-3" fill="none" stroke="#8ba8bd" stroke-width="2" stroke-linecap="round"/>
+          <rect x="14" y="20" width="20" height="11" rx="5" fill="#14212d"/>
+          <g class="brand-bot-eyes"><rect x="18" y="23" width="3" height="5" rx="1.5" fill="#bbecf2"/><rect x="27" y="23" width="3" height="5" rx="1.5" fill="#bbecf2"/></g>
+          <path class="brand-bot-smile" d="M21 34q3 2 6 0" fill="none" stroke="#94b6c6" stroke-width="1.4" stroke-linecap="round"/>
+        </g>
+      </svg><span>AgentBus<small id="sidebarProjectName">当前项目</small></span></div>
+      <nav class="main-nav" aria-label="主导航">
+        <button class="nav-item active" id="navTree" aria-current="page"><svg class="icon"><use href="#i-tree"/></svg>任务森林<span class="nav-count" id="navLeafCount">—</span></button>
+        <button class="nav-item" data-view="skills"><svg class="icon"><use href="#i-grid"/></svg>技能中心</button>
+        <button class="nav-item" data-view="recovery"><svg class="icon"><use href="#i-history"/></svg>接力与恢复</button>
+        <button class="nav-item" data-view="activity"><svg class="icon"><use href="#i-activity"/></svg>项目活动</button>
+      </nav>
+      <div class="sidebar-section"><span>协作成员工位</span><button class="icon-button" id="memberSettings" aria-label="管理成员">+</button></div>
+      <p class="member-hint">选择成员，聚焦其任务</p>
+      <div id="memberList" class="member-list"></div>
+      <button class="clear-focus" id="clearFocus" hidden>显示全部成员的任务 <span>×</span></button>
+      <span class="sr-only" id="presenceAnnouncement" aria-live="polite" aria-atomic="true"></span>
+      <div class="sidebar-foot"><button class="nav-item" id="settingsButton"><svg class="icon"><use href="#i-settings"/></svg>工作台设置</button><div class="sidebar-version">AgentBus <span>多智能体协同工作台</span></div></div>
+    </aside>
+
+    <button class="sidebar-resize-handle" id="sidebarResizeHandle" type="button" role="separator" aria-label="调整成员侧栏宽度" aria-orientation="vertical" aria-valuemin="180" aria-valuemax="720" aria-valuenow="280" tabindex="0" title="拖动调整宽度；双击复位；方向键微调">
+      <span aria-hidden="true"></span>
+    </button>
+    <main class="workspace">
+      <!-- 顶部 28px 原生桌面菜单栏 (Menu Bar) -->
+      <nav class="menubar" id="menuBar" aria-label="应用程序顶部菜单栏">
+        <div class="menubar-brand"><span class="brand-text">AgentBus</span></div>
+        <div class="menu-item" data-menu="file">
+          <button class="menu-trigger" id="menuTriggerFile" aria-haspopup="true" aria-expanded="false">文件</button>
+          <div class="menu-dropdown" role="menu">
+            <button class="menu-action" id="menuAppendTaskButton" role="menuitem"><svg class="icon tiny"><use href="#i-tree"/></svg>追加新任务节点... <kbd>Ctrl+N</kbd></button>
+            <div class="menu-separator" role="separator"></div>
+            <button class="menu-action" id="importTreeButton" role="menuitem"><svg class="icon tiny"><use href="#i-folder"/></svg>导入任务树模板...</button>
+            <button class="menu-action" id="scanProjectTreesButton" role="menuitem"><svg class="icon tiny"><use href="#i-refresh"/></svg>扫描当前工程中的任务树</button>
+            <button class="menu-action" id="menuWorkspaceFolder" role="menuitem"><svg class="icon tiny"><use href="#i-folder"/></svg>打开项目工作空间...</button>
+            <div class="menu-separator" role="separator"></div>
+            <button class="menu-action" id="exportTreeButton" role="menuitem"><svg class="icon tiny"><use href="#i-arrow"/></svg>导出当前任务树...</button>
+            <button class="menu-action" id="exportCanvasImageButton" role="menuitem"><svg class="icon tiny"><use href="#i-arrow"/></svg>导出整树超清大图...</button>
+            <button class="menu-action" id="exportBackupButton" role="menuitem"><svg class="icon tiny"><use href="#i-arrow"/></svg>导出项目全局备份...</button>
+            <button class="menu-action" id="restoreBackupButton" role="menuitem"><svg class="icon tiny"><use href="#i-folder"/></svg>还原项目全局备份...</button>
+            <button class="menu-action" id="exportHandoverButton" role="menuitem"><svg class="icon tiny"><use href="#i-arrow"/></svg>导出项目交接总结...</button>
+            <div class="menu-separator" role="separator"></div>
+            <button class="menu-action" id="menuOutputFolder" role="menuitem"><svg class="icon tiny"><use href="#i-folder"/></svg>更换业务产出目录...</button>
+            <button class="menu-action" id="menuRefreshAction" role="menuitem"><svg class="icon tiny"><use href="#i-refresh"/></svg>重新读取本地快照 <kbd>F5</kbd></button>
+          </div>
+        </div>
+        <div class="menu-item" data-menu="dispatch">
+          <button class="menu-trigger" id="menuTriggerDispatch" aria-haspopup="true" aria-expanded="false">调度</button>
+          <div class="menu-dropdown" role="menu">
+            <button class="menu-action" id="menuModeAuto" role="menuitem"><span class="menu-check" id="checkModeAuto">✓</span>自适应流水线调度</button>
+            <button class="menu-action" id="menuModeAutonomous" role="menuitem"><span class="menu-check" id="checkModeAutonomous"></span>自由调度（Agent自主抢单接活）</button>
+            <button class="menu-action" id="menuModeManual" role="menuitem"><span class="menu-check" id="checkModeManual"></span>架构师定向委派</button>
+            <div class="menu-separator" role="separator"></div>
+            <button class="menu-action" id="autoDispatchButton" role="menuitem"><svg class="icon tiny"><use href="#i-play"/></svg>启动流水线流转</button>
+            <button class="menu-action stop-button" id="stopButton" role="menuitem" disabled><svg class="icon tiny"><use href="#i-pause"/></svg><span>暂停自动派工（保留在途）</span></button>
+            <div class="menu-separator" role="separator"></div>
+            <button class="menu-action" id="menuSupervisorSettings" role="menuitem">独立成果复核与双签设置…<span class="menu-status" id="menuSupervisorStatus">未开启</span></button>
+          </div>
+        </div>
+        <div class="menu-item" data-menu="view">
+          <button class="menu-trigger" id="menuTriggerView" aria-haspopup="true" aria-expanded="false">视图</button>
+          <div class="menu-dropdown" role="menu">
+            <div class="menu-sublabel">任务状态过滤</div>
+            <button class="menu-action filter active" data-filter="all" role="menuitem"><span class="menu-check" id="checkFilterAll">✓</span>全部任务</button>
+            <button class="menu-action filter" data-filter="working" role="menuitem"><span class="menu-check" id="checkFilterWorking"></span>有执行心跳</button>
+            <button class="menu-action filter" data-filter="claimed" role="menuitem"><span class="menu-check" id="checkFilterClaimed"></span>已认领</button>
+            <button class="menu-action filter" data-filter="delivered" role="menuitem"><span class="menu-check" id="checkFilterDelivered"></span>已交付</button>
+            <button class="menu-action filter" data-filter="claimable" role="menuitem"><span class="menu-check" id="checkFilterClaimable"></span>可认领</button>
+            <button class="menu-action filter" data-filter="blocked" role="menuitem"><span class="menu-check" id="checkFilterBlocked"></span>⚠️ 前序阻塞</button>
+            <div class="menu-separator" role="separator"></div>
+            <div class="menu-sublabel">优先级降噪过滤</div>
+            <button class="menu-action filter" data-filter="p0" role="menuitem"><span class="menu-check" id="checkFilterP0"></span>🔴 P0 核心防线</button>
+            <button class="menu-action filter" data-filter="p1" role="menuitem"><span class="menu-check" id="checkFilterP1"></span>🟠 P1 关键特性</button>
+            <button class="menu-action filter" data-filter="p2" role="menuitem"><span class="menu-check" id="checkFilterP2"></span>🔵 P2 常规推进</button>
+            <button class="menu-action filter" data-filter="p3" role="menuitem"><span class="menu-check" id="checkFilterP3"></span>🟢 P3 规范与基线</button>
+            <div class="menu-separator" role="separator"></div>
+            <button class="menu-action" id="menuFitView" role="menuitem"><svg class="icon tiny"><use href="#i-fit"/></svg>适应窗口全貌</button>
+            <button class="menu-action" id="menuResetView" role="menuitem">恢复 1:1 缩放 <kbd>0</kbd></button>
+            <button class="menu-action" id="menuFullscreenAction" role="menuitem">全屏沉浸画布模式 <kbd>F11</kbd></button>
+            <button class="menu-action" id="menuTidyAction" role="menuitem">智能对齐整理 <kbd>Alt+A</kbd></button>
+            <button class="menu-action" id="menuThemeAction" role="menuitem"><svg class="icon tiny"><use href="#i-sun"/></svg>切换深色 / 浅色模式</button>
+            <button class="menu-action" id="menuSidebarToggle" role="menuitem">收起 / 展开成员边栏 <kbd>Ctrl+B</kbd></button>
+          </div>
+        </div>
+        <div class="menu-item" data-menu="tools">
+          <button class="menu-trigger" id="menuTriggerTools" aria-haspopup="true" aria-expanded="false">工具</button>
+          <div class="menu-dropdown" role="menu">
+            <button class="menu-action" id="menuCommandPaletteAction" role="menuitem"><svg class="icon tiny"><use href="#i-search"/></svg>全局命令面板... <kbd>Ctrl+K</kbd></button>
+            <div class="menu-separator" role="separator"></div>
+            <button class="menu-action" data-view="skills" role="menuitem"><svg class="icon tiny"><use href="#i-grid"/></svg>统一技能中心</button>
+            <button class="menu-action" data-view="recovery" role="menuitem"><svg class="icon tiny"><use href="#i-history"/></svg>接力与断点恢复</button>
+            <button class="menu-action" data-view="activity" role="menuitem"><svg class="icon tiny"><use href="#i-activity"/></svg>项目活动与流水日志</button>
+          </div>
+        </div>
+        <div class="menu-item" data-menu="help">
+          <button class="menu-trigger" id="menuTriggerHelp" aria-haspopup="true" aria-expanded="false">帮助</button>
+          <div class="menu-dropdown" role="menu">
+            <button class="menu-action" id="menuHelpQuickstart" role="menuitem">新项目快速上手向导...</button>
+            <button class="menu-action" id="menuHelpFlow" role="menuitem">6 步协作新手指南...</button>
+            <button class="menu-action" id="menuHelpKeys" role="menuitem">快捷键手册...</button>
+            <button class="menu-action" id="menuHelpManifest" role="menuitem">系统交底与环境自检...</button>
+            <div class="menu-separator" role="separator"></div>
+            <button class="menu-action" id="menuCheckRelease" role="menuitem" aria-haspopup="dialog">检查更新…</button>
+            <button class="menu-action" id="menuAbout" role="menuitem">关于 AgentBus</button>
+          </div>
+        </div>
+
+        <div class="menubar-spacer"></div>
+
+        <div class="menubar-meta">
+          <button class="menu-trigger" id="releaseUpdateIndicator" type="button" aria-haspopup="dialog" hidden>有新版本</button>
+          <span class="connection-badge" id="connectionBadge"><span class="status-dot neutral"></span><span id="connectionLabel">读取本地快照</span></span>
+          <button class="icon-button mini" id="themeButton" aria-label="切换深浅主题" title="切换深浅主题"><svg class="icon"><use href="#i-sun"/></svg></button>
+          <button class="icon-button mini" id="refreshButton" aria-label="刷新实际快照" title="刷新快照 (F5)"><svg class="icon"><use href="#i-refresh"/></svg></button>
+        </div>
+      </nav>
+
+      <!-- 项目状态、任务交付进度与快速搜索 -->
+      <div class="main-control-bar" id="mainControlBar">
+        <button class="icon-button sidebar-toggle" id="sidebarToggle" aria-controls="memberSidebar" aria-expanded="true" aria-label="收起成员栏" title="展开/收起边栏 (Ctrl+B)"><svg class="icon"><use href="#i-chevron"/></svg><span class="sidebar-toggle-copy">成员</span></button>
+        <div class="current-project-label"><span class="project-status-mark" aria-hidden="true"></span><span><strong id="headerProjectNameVisible">当前项目</strong><small>已确定的任务树</small></span></div>
+
+        <div class="progress-capsule" id="progressCapsule" title="当前交付进度">
+          <div class="capsule-track"><div class="capsule-fill" id="capsuleFill" style="width:0%"></div></div>
+          <span class="capsule-text" id="capsuleText">0/0 已交付 · 0%</span>
+        </div>
+
+        <div class="quick-action-bar" id="quickActionBar">
+          <button class="quick-btn" id="quickCommandPaletteBtn" type="button" title="全局命令面板与常用动作 (Ctrl+K)">
+            <svg class="icon tiny"><use href="#i-search"/></svg><span>命令面板</span><kbd>Ctrl+K</kbd>
+          </button>
+          <button class="quick-btn" id="quickAppendTaskBtn" type="button" title="新建任务节点 (Alt+N)">
+            <svg class="icon tiny"><use href="#i-tree"/></svg><span>+ 任务</span><kbd>Alt+N</kbd>
+          </button>
+          <button class="quick-btn" id="quickTidyBtn" type="button" title="智能紧凑布局与拓扑顺流 (Alt+A)">
+            <svg class="icon tiny"><use href="#i-grid"/></svg><span>✦ 智能对齐</span><kbd>Alt+A</kbd>
+          </button>
+          <button class="quick-btn" id="quickToggleWireBtn" type="button" title="切换前序依赖虚线显示/隐藏 (Alt+W)">
+            <svg class="icon tiny"><use href="#i-link"/></svg><span id="wireToggleLabel">依赖线</span><kbd>Alt+W</kbd>
+          </button>
+          <button class="quick-btn" id="quickModeSwitchBtn" type="button" title="一键切换任务调度模式（自由抢单 / 自动派发 / 手动指定）">
+            <span id="quickModeSwitchText">自由抢单</span>
+          </button>
+          <button class="quick-btn" id="quickDispatchBtn" type="button" title="快速启停流水线调度">
+            <svg class="icon tiny"><use href="#i-play"/></svg><span id="quickDispatchText">启动调度</span>
+          </button>
+          <button class="quick-btn" id="quickFitBtn" type="button" title="适应窗口全貌 (F)">
+            <svg class="icon tiny"><use href="#i-fit"/></svg><span>适屏</span>
+          </button>
+          <button class="quick-btn" id="quickRefreshBtn" type="button" title="重新读取本地快照 (F5)">
+            <svg class="icon tiny"><use href="#i-refresh"/></svg><span>刷新</span><kbd>F5</kbd>
+          </button>
+        </div>
+
+        <div class="search-box">
+          <svg class="icon"><use href="#i-search"/></svg>
+          <input id="leafSearch" type="search" placeholder="搜索序号，如 1.2，或按 / 激活" autocomplete="off" aria-label="按任务序号、名称或成员搜索">
+          <kbd>/</kbd>
+        </div>
+
+        <span id="focusLabel" class="focus-label" hidden></span>
+      </div>
+
+      <div id="deadlockBanner" class="deadlock-banner" role="alert" hidden></div>
+
+      <!-- 屏幕阅读器播报区：仅保留可访问性真正需要的实时文本，测试改读可见元素的 data-* -->
+      <div class="sr-only" aria-hidden="true">
+        <span id="forestSubtitle">目标、成果与接手说明来自正式记录。</span>
+        <div class="tree-actions">
+          <select id="assignmentMode" aria-label="任务分配方式"><option value="automatic">组长自动派发</option><option value="autonomous">自由调度（Agent自动接活）</option><option value="manual">我来选择（手动指定）</option></select>
+          <span class="assignment-note" id="assignmentNote">建立任务树后开始</span>
+        </div>
+        <div class="forest-toolbar">
+          <span id="sourceLabel">状态来自正式总线</span>
+        </div>
+      </div>
+
+      <details class="project-flow" id="projectFlow">
+        <summary><span class="flow-mark">01—06</span><strong>协同流程</strong><span id="flowSummary">配置团队拓扑，构建任务树，开启协同交付</span><svg class="icon"><use href="#i-chevron"/></svg></summary>
+        <div class="flow-steps" id="flowSteps"></div>
+        <p class="flow-footnote">桌面成员收到指令后读取项目文件；状态灯只根据实际任务与心跳更新。</p>
+      </details>
+
+      <!-- 100% 宽阔纯净的任务树大画布 -->
+      <section class="forest-viewport" id="forestViewport" tabindex="0" aria-label="任务森林画布。拖拽空白平移，滚轮缩放，方向键平移，零键复位。">
+        <div class="forest-pan-layer" id="forestPanLayer"><div class="forest-stage" id="forestStage"><svg id="forestLines" class="forest-lines" aria-hidden="true"></svg><div id="forestNodes"></div></div></div>
+        <div class="canvas-empty" id="canvasEmpty"><svg class="icon"><use href="#i-tree"/></svg><h2>正在读取任务森林</h2><p>只展示当前项目的正式记录。</p></div>
+        <div class="canvas-controls" role="group" aria-label="画布缩放">
+          <button id="zoomOut" aria-label="缩小画布">−</button>
+          <output id="zoomLevel" aria-label="当前缩放">100%</output>
+          <button id="zoomIn" aria-label="放大画布">+</button>
+          <span class="control-divider"></span>
+          <button id="resetView" aria-label="复位到百分之百" title="复位到 100%">1:1</button>
+          <button id="fitView" aria-label="适配所有任务" title="适配全部任务"><svg class="icon"><use href="#i-fit"/></svg></button>
+          <span class="control-divider"></span>
+          <button id="tidyView" class="smart-layout-btn" aria-label="智能紧凑对齐" title="智能多列紧凑对齐与拓扑顺流 (Alt+A)">✦ 智能对齐</button>
+          <button id="quickAddTaskBtn" class="smart-layout-btn quick-add-btn" aria-label="新建任务卡" title="就地新建任务卡 (快捷键 N)">＋ 新建任务</button>
+        </div>
+        <!-- 鹰眼全景小地图组件 (§6.8 CANVAS-MINIMAP) -->
+        <div class="canvas-minimap" id="canvasMinimap" role="region" aria-label="全景小地图导航">
+          <div class="minimap-header" id="minimapHeader">
+            <span class="minimap-title"><svg class="icon minimap-icon"><use href="#i-tree"/></svg>全景导航</span>
+            <button type="button" class="minimap-toggle" id="minimapToggle" aria-label="折叠或展开小地图" title="折叠/展开全景小地图">▾</button>
+          </div>
+          <div class="minimap-body" id="minimapBody" title="点击或拖拽小地图快速移动视野">
+            <canvas id="minimapCanvas" width="200" height="130" aria-label="任务森林全景小地图"></canvas>
+            <div id="minimapViewport" class="minimap-viewport" aria-hidden="true" title="当前画布可视范围"></div>
+          </div>
+        </div>
+        <div class="preview-notice" id="previewNotice" hidden><strong>离线预览 · 只读</strong><span>此浏览器没有连接桌面桥梁。状态来自保存的实际快照。</span></div>
+      </section>
+
+      <footer class="workspace-footer">
+        <span><span class="status-dot neutral"></span><span id="snapshotTime">尚未读取快照</span></span>
+        <span id="footerHint">拖拽平移 · 滚轮缩放 · 点击任务查看交接 · 菜单栏提供完整文件与调度功能</span>
+      </footer>
+    </main>
+  </div>
+
+  <aside class="detail-drawer" id="detailDrawer" aria-labelledby="detailTitle" hidden>
+    <header class="drawer-header">
+      <div><span class="eyebrow">TASK LEAF</span><h2 id="detailTitle">任务详情</h2></div>
+      <div class="drawer-header-actions">
+        <button class="icon-button" id="drawerWidthToggle" type="button" aria-label="切换宽屏/居中阅读模式" title="切换宽屏/居中阅读模式 (Alt+F)">
+          <svg class="icon"><use href="#i-fit"/></svg>
+        </button>
+        <button class="icon-button" id="closeDetail" aria-label="关闭任务详情"><svg class="icon"><use href="#i-close"/></svg></button>
+      </div>
+    </header>
+    <div id="detailContent" class="drawer-content"></div>
+  </aside>
+
+  <dialog id="workspaceDialog" class="workspace-dialog" aria-labelledby="dialogTitle">
+    <header class="dialog-header"><div><span class="eyebrow" id="dialogEyebrow">WORKSPACE</span><h2 id="dialogTitle">工作台设置</h2></div><button class="icon-button" id="closeDialog" aria-label="关闭窗口"><svg class="icon"><use href="#i-close"/></svg></button></header>
+    <div id="dialogContent" class="dialog-content"></div>
+  </dialog>
+
+  <!-- 全局命令与常用动作面板 (Command Palette) §6.9 -->
+  <div class="command-palette-backdrop" id="commandPaletteBackdrop" hidden>
+    <div class="command-palette-modal" id="commandPaletteModal" role="dialog" aria-modal="true" aria-label="全局命令与常用动作面板">
+      <div class="command-palette-header">
+        <svg class="icon"><use href="#i-search"/></svg>
+        <input type="text" id="commandPaletteInput" class="command-palette-input"
+               placeholder="搜索常用动作、章节号 (如 1.2) 或成员..."
+               role="combobox" aria-expanded="true" aria-controls="commandPaletteResults"
+               aria-autocomplete="list" aria-activedescendant="" autocomplete="off" spellcheck="false">
+        <kbd class="palette-kbd">Esc 关闭</kbd>
+      </div>
+      <div class="command-palette-results" id="commandPaletteResults" role="listbox" aria-label="搜索结果候选列表"></div>
+      <div class="command-palette-footer">
+        <span><kbd>↑</kbd> <kbd>↓</kbd> 移动选择</span>
+        <span><kbd>Enter</kbd> 触发执行</span>
+        <span><kbd>Esc</kbd> 退出</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="toast" id="toast" type="button" aria-live="polite" hidden disabled></button>
+</body>
+</html>

@@ -1,0 +1,322 @@
+{
+  "schema_version": 1,
+  "collected_at": "2026-11-16",
+  "coverage": "listed original license texts, fixed native source commits and bundled Codex/ripgrep version binding; Ratatui version derived from release Cargo.lock; WebView2 SDK DLL binding retained; not a complete native or Codex transitive-binary license audit; proxy-tools BSD/MIT conflict unresolved; includes observed frozen build-package and setuptools vendored license/NOTICE originals, not a full linked dependency determination",
+  "files": [
+    {
+      "path": "licenses/altgraph-LICENSE.txt",
+      "component": "altgraph",
+      "version": "0.17.5",
+      "source": "explicit build wheel altgraph 0.17.5 RECORD-verified altgraph-0.17.5.dist-info/LICENSE",
+      "sha256": "6c194d6db0c64d45535d10c95142b9b0cda7b7dcc7f1ddee302b3d536f3dbe46"
+    },
+    {
+      "path": "licenses/annotated-types-LICENSE.txt",
+      "component": "annotated-types",
+      "version": "0.8.0",
+      "source": "installed wheel licenses/LICENSE",
+      "sha256": "fe1049884b1a0d9342901e88e07f32925d24b3121d9972b6a6805fb9824b095d"
+    },
+    {
+      "path": "licenses/bottle-LICENSE.txt",
+      "component": "bottle",
+      "version": "0.13.4",
+      "source": "installed wheel bottle-0.13.4.dist-info/licenses/LICENSE",
+      "sha256": "af150257b1f7cce92b6207854f2e8f90ea9ae52d7cac758d13a47bd12e2a2443"
+    },
+    {
+      "path": "licenses/cffi-LICENSE.txt",
+      "component": "cffi",
+      "version": "2.1.1",
+      "source": "installed wheel cffi-2.1.1.dist-info/licenses/LICENSE",
+      "sha256": "5ba24ddc57067f9249add644c3afc41a5d6dc37e23433ef759d95df370b0af63"
+    },
+    {
+      "path": "licenses/clr-loader-LICENSE.txt",
+      "component": "clr-loader",
+      "version": "0.2.8",
+      "source": "https://raw.githubusercontent.com/pythonnet/clr-loader/v0.2.8/LICENSE",
+      "sha256": "b00f9a4b112b44f91276ad8388ed470ad36668ff80f56f15e1e6981c85e6d23d"
+    },
+    {
+      "path": "licenses/codex-LICENSE.txt",
+      "component": "OpenAI Codex",
+      "version": "0.157.1; release source rust-v0.157.1",
+      "source": "https://raw.githubusercontent.com/openai/codex/36650394c5b38c2990ccf2a3457165ca3e9d9726/LICENSE",
+      "sha256": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc"
+    },
+    {
+      "path": "licenses/codex-NOTICE.txt",
+      "component": "OpenAI Codex",
+      "version": "0.157.1; release source rust-v0.157.1",
+      "source": "https://raw.githubusercontent.com/openai/codex/36650394c5b38c2990ccf2a3457165ca3e9d9726/NOTICE",
+      "sha256": "9d71575ecfd9a843fc1677b0efb08053c6ba9fd686a0de1a6f5382fd3c220915"
+    },
+    {
+      "path": "licenses/packaging-LICENSE.APACHE.txt",
+      "component": "packaging",
+      "version": "26.3",
+      "source": "installed wheel licenses/LICENSE.APACHE",
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+    },
+    {
+      "path": "licenses/packaging-LICENSE.BSD.txt",
+      "component": "packaging",
+      "version": "26.3",
+      "source": "installed wheel licenses/LICENSE.BSD",
+      "sha256": "b70e7e9b742f1cc6f948b34c16aa39ffece94196364bc88ff0d2180f0028fac5"
+    },
+    {
+      "path": "licenses/packaging-LICENSE.txt",
+      "component": "packaging",
+      "version": "26.3",
+      "source": "installed wheel licenses/LICENSE",
+      "sha256": "cad1ef5bd340d73e074ba614d26f7deaca5c7940c3d8c34852e65c4909686c48"
+    },
+    {
+      "path": "licenses/pefile-LICENSE.txt",
+      "component": "pefile",
+      "version": "2024.8.26",
+      "source": "explicit build wheel pefile 2024.8.26 RECORD-verified pefile-2024.8.26.dist-info/LICENSE",
+      "sha256": "b44409c067c6da52bfb54bb6624fb11a7b52157c3a13ae1400232f8196e86ad3"
+    },
+    {
+      "path": "licenses/proxy-tools-LICENSE.txt",
+      "component": "proxy-tools",
+      "version": "0.1.0 source header and MIT metadata conflict unresolved; archived upstream BSD text",
+      "source": "https://raw.githubusercontent.com/jtushman/proxy_tools/ccd35a569b95bec271a59890780c7821756c548a/LICENSE.txt",
+      "sha256": "a428fb8a2e762af3eb0a6edbbb88e9b42ccfee80fd9b423958bcacf9b9abbfe4"
+    },
+    {
+      "path": "licenses/pycparser-LICENSE.txt",
+      "component": "pycparser",
+      "version": "3.1",
+      "source": "installed wheel pycparser-3.1.dist-info/licenses/LICENSE",
+      "sha256": "0a9e78156ae8b96caf1b4f11ac2df424b83de29736f9e757630548a6272fdf90"
+    },
+    {
+      "path": "licenses/pydantic-LICENSE.txt",
+      "component": "pydantic",
+      "version": "2.14.0",
+      "source": "installed wheel pydantic-2.14.0.dist-info/licenses/LICENSE",
+      "sha256": "a9e186f3ca16b5eef84318e7a701721351a00cb7b8ae3a4394b67b49e3529ef3"
+    },
+    {
+      "path": "licenses/pydantic-core-LICENSE.txt",
+      "component": "pydantic-core",
+      "version": "2.50.0",
+      "source": "installed wheel pydantic_core-2.50.0.dist-info/licenses/LICENSE",
+      "sha256": "fbe7f615f18d135c07000e5a86325db27f42c7729699ef166ac1f7a3f4586bf4"
+    },
+    {
+      "path": "licenses/pyinstaller-COPYING.txt",
+      "component": "PyInstaller",
+      "version": "6.22.3",
+      "source": "installed PyInstaller distribution COPYING.txt",
+      "sha256": "0598064c7d2718e38d7914a7d08343b2fa008e3bea9ebba2aa7a6ffa5900dd64"
+    },
+    {
+      "path": "licenses/python-LICENSE.txt",
+      "component": "Python",
+      "version": "3.12.14",
+      "source": "installed CPython 3.12.14 distribution LICENSE.txt",
+      "sha256": "886a0ead2d89030ee62dbff52b04e47ab91998341295bb9c56fb952b4e081c7a"
+    },
+    {
+      "path": "licenses/pythonnet-LICENSE.txt",
+      "component": "pythonnet",
+      "version": "3.0.5",
+      "source": "https://raw.githubusercontent.com/pythonnet/pythonnet/v3.0.5/LICENSE",
+      "sha256": "e1dc3a6ff017a6800dc27a7220500f512b95fbcd996d38ebbbff85c693245369"
+    },
+    {
+      "path": "licenses/pywebview-LICENSE.txt",
+      "component": "pywebview",
+      "version": "6.2.1",
+      "source": "installed wheel pywebview-6.2.1.dist-info/licenses/LICENSE",
+      "sha256": "4a988dd3598832cd3653de20dc33cb677d0fb53ab5551c879ca31280ae653675"
+    },
+    {
+      "path": "licenses/pywin32-ctypes-LICENSE.txt",
+      "component": "pywin32-ctypes",
+      "version": "0.2.3",
+      "source": "explicit build wheel pywin32-ctypes 0.2.3 RECORD-verified pywin32_ctypes-0.2.3.dist-info/LICENSE.txt",
+      "sha256": "dfa83b3e2709adfcdb838d9ad55823ca674abb780e60563d9dd9544ccbf785e9"
+    },
+    {
+      "path": "licenses/ratatui-LICENSE.txt",
+      "component": "Ratatui",
+      "version": "0.30.2; from Codex 0.157.1 Cargo.lock, not a complete linked-binary SBOM",
+      "source": "https://raw.githubusercontent.com/ratatui/ratatui/e665c36cb14752a61cd777fbd06dbef8474f2add/LICENSE",
+      "sha256": "50eb43e8d742c9c61a9391e42b2184fce54dbd1893a1bb1c85b8c9ee217ab1f5"
+    },
+    {
+      "path": "licenses/ripgrep-LICENSE-MIT.txt",
+      "component": "ripgrep",
+      "version": "15.2.0; bundled rg version and release commit verified",
+      "source": "https://raw.githubusercontent.com/BurntSushi/ripgrep/e89fff89ac9af12e8d4ce9d5fd07beb408ca730f/LICENSE-MIT",
+      "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f"
+    },
+    {
+      "path": "licenses/ripgrep-UNLICENSE.txt",
+      "component": "ripgrep",
+      "version": "15.2.0; bundled rg version and release commit verified",
+      "source": "https://raw.githubusercontent.com/BurntSushi/ripgrep/e89fff89ac9af12e8d4ce9d5fd07beb408ca730f/UNLICENSE",
+      "sha256": "7e12e5df4bae12cb21581ba157ced20e1986a0508dd10d0e8a4ab9a4cf94e85c"
+    },
+    {
+      "path": "licenses/setuptools-LICENSE.txt",
+      "component": "setuptools",
+      "version": "84.0.0",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools-84.0.0.dist-info/licenses/LICENSE",
+      "sha256": "86da0f01aeae46348a3c3d465195dc1ceccde79f79e87769a64b8da04b2a4741"
+    },
+    {
+      "path": "licenses/setuptools-config-NOTICE.txt",
+      "component": "setuptools",
+      "version": "84.0.0",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools/config/NOTICE",
+      "sha256": "2dddf08818297a3b89d43d95ff659d8da85741108c9136dfa3a4d856c0623bd8"
+    },
+    {
+      "path": "licenses/setuptools-validate-pyproject-NOTICE.txt",
+      "component": "setuptools",
+      "version": "84.0.0",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools/config/_validate_pyproject/NOTICE",
+      "sha256": "09c9bcea95ca086f8bc5bed174e40bc835b297d40fb5f86bbbb570fe0a5581a7"
+    },
+    {
+      "path": "licenses/setuptools-vendor-autocommand-LICENSE.txt",
+      "component": "setuptools vendored autocommand",
+      "version": "2.2.2",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools/_vendor/autocommand-2.2.2.dist-info/LICENSE",
+      "sha256": "ade78d04982d69972d444a8e14a94f87a2334dd3855cc80348ea8e240aa0df2d"
+    },
+    {
+      "path": "licenses/setuptools-vendor-backports-tarfile-LICENSE.txt",
+      "component": "setuptools vendored backports.tarfile",
+      "version": "1.2.0",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools/_vendor/backports.tarfile-1.2.0.dist-info/LICENSE",
+      "sha256": "86da0f01aeae46348a3c3d465195dc1ceccde79f79e87769a64b8da04b2a4741"
+    },
+    {
+      "path": "licenses/setuptools-vendor-importlib-metadata-LICENSE.txt",
+      "component": "setuptools vendored importlib_metadata",
+      "version": "8.7.1",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools/_vendor/importlib_metadata-8.7.1.dist-info/licenses/LICENSE",
+      "sha256": "458502e12d97bbf64438606a20044aa85eb05fb0a8a807bb35dbec253fd1fc04"
+    },
+    {
+      "path": "licenses/setuptools-vendor-jaraco-context-LICENSE.txt",
+      "component": "setuptools vendored jaraco.context",
+      "version": "6.1.0",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools/_vendor/jaraco_context-6.1.0.dist-info/licenses/LICENSE",
+      "sha256": "9755a18519666e5f0f4cae3daad3d7012bcae48a600b31237d75e9fe134e6683"
+    },
+    {
+      "path": "licenses/setuptools-vendor-jaraco-functools-LICENSE.txt",
+      "component": "setuptools vendored jaraco.functools",
+      "version": "4.4.0",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools/_vendor/jaraco_functools-4.4.0.dist-info/licenses/LICENSE",
+      "sha256": "5a57cb4db85e2a2dd88c290628908add57e3451449e0a9a71fdfb38776fd759d"
+    },
+    {
+      "path": "licenses/setuptools-vendor-jaraco-text-LICENSE.txt",
+      "component": "setuptools vendored jaraco.text",
+      "version": "4.0.0",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools/_vendor/jaraco.text-4.0.0.dist-info/LICENSE",
+      "sha256": "86da0f01aeae46348a3c3d465195dc1ceccde79f79e87769a64b8da04b2a4741"
+    },
+    {
+      "path": "licenses/setuptools-vendor-more-itertools-LICENSE.txt",
+      "component": "setuptools vendored more-itertools",
+      "version": "10.8.0",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools/_vendor/more_itertools-10.8.0.dist-info/licenses/LICENSE",
+      "sha256": "09f1c8c9e941af3e584d59641ea9b87d83c0cb0fd007eb5ef391a7e2643c1a46"
+    },
+    {
+      "path": "licenses/setuptools-vendor-packaging-LICENSE.APACHE.txt",
+      "component": "setuptools vendored packaging",
+      "version": "26.0",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools/_vendor/packaging-26.0.dist-info/licenses/LICENSE.APACHE",
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+    },
+    {
+      "path": "licenses/setuptools-vendor-packaging-LICENSE.BSD.txt",
+      "component": "setuptools vendored packaging",
+      "version": "26.0",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools/_vendor/packaging-26.0.dist-info/licenses/LICENSE.BSD",
+      "sha256": "b70e7e9b742f1cc6f948b34c16aa39ffece94196364bc88ff0d2180f0028fac5"
+    },
+    {
+      "path": "licenses/setuptools-vendor-packaging-LICENSE.txt",
+      "component": "setuptools vendored packaging",
+      "version": "26.0",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools/_vendor/packaging-26.0.dist-info/licenses/LICENSE",
+      "sha256": "cad1ef5bd340d73e074ba614d26f7deaca5c7940c3d8c34852e65c4909686c48"
+    },
+    {
+      "path": "licenses/setuptools-vendor-platformdirs-LICENSE.txt",
+      "component": "setuptools vendored platformdirs",
+      "version": "4.4.0",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools/_vendor/platformdirs-4.4.0.dist-info/licenses/LICENSE",
+      "sha256": "29e0fd62e929850e86eb28c3fdccf0cefdf4fa94879011cffb3d0d4bed6d4db6"
+    },
+    {
+      "path": "licenses/setuptools-vendor-tomli-LICENSE.txt",
+      "component": "setuptools vendored tomli",
+      "version": "2.4.0",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools/_vendor/tomli-2.4.0.dist-info/licenses/LICENSE",
+      "sha256": "b80816b0d530b8accb4c2211783790984a6e3b61922c2b5ee92f3372ab2742fe"
+    },
+    {
+      "path": "licenses/setuptools-vendor-wheel-LICENSE.txt",
+      "component": "setuptools vendored wheel",
+      "version": "0.46.3",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools/_vendor/wheel-0.46.3.dist-info/licenses/LICENSE.txt",
+      "sha256": "30c23618679108f3e8ea1d2a658c7ca417bdfc891c98ef1a89fa4ff0c9828654"
+    },
+    {
+      "path": "licenses/setuptools-vendor-zipp-LICENSE.txt",
+      "component": "setuptools vendored zipp",
+      "version": "3.23.0",
+      "source": "explicit build wheel setuptools 84.0.0 RECORD-verified setuptools/_vendor/zipp-3.23.0.dist-info/licenses/LICENSE",
+      "sha256": "5a57cb4db85e2a2dd88c290628908add57e3451449e0a9a71fdfb38776fd759d"
+    },
+    {
+      "path": "licenses/tcl-license.terms",
+      "component": "Tcl",
+      "version": "8.6.12",
+      "source": "https://raw.githubusercontent.com/tcltk/tcl/core-8-6-12/license.terms",
+      "sha256": "c0a69a2bfd757361ec7e6143973b103c90409316b49e9c88db26ad6388e79f16"
+    },
+    {
+      "path": "licenses/tk-license.terms",
+      "component": "Tk",
+      "version": "8.6.12",
+      "source": "installed CPython3.12 distribution tcl/tk8.6/license.terms",
+      "sha256": "0d1e4405f6273f091732764ed89b57066be63ce64869be6c71ea337dc4f2f9b5"
+    },
+    {
+      "path": "licenses/typing-extensions-LICENSE.txt",
+      "component": "typing-extensions",
+      "version": "4.16.0",
+      "source": "installed wheel licenses/LICENSE",
+      "sha256": "3b2f81fe21d181c499c59a256c8e1968455d6689d269aa85373bfb6af41da3bf"
+    },
+    {
+      "path": "licenses/typing-inspection-LICENSE.txt",
+      "component": "typing-inspection",
+      "version": "0.4.4",
+      "source": "installed wheel licenses/LICENSE",
+      "sha256": "804b59b25f2c31bd278f9202a19ae49a3945aa2664387e2d0a128c7cacc61ec3"
+    },
+    {
+      "path": "licenses/webview2-sdk-LICENSE.txt",
+      "component": "Microsoft.Web.WebView2 SDK and Loader",
+      "version": "1.0.3856.49",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.web.webview2/1.0.3856.49/microsoft.web.webview2.1.0.3856.49.nupkg :: LICENSE.txt",
+      "sha256": "0af8f1b807512aae39c2ac1aa4d0cae65cabecb6fd554b8439a5162a0d6eca55"
+    }
+  ]
+}

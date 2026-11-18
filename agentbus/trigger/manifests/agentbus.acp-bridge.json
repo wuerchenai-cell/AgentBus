@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "connector_id": "agentbus.acp-bridge",
+  "connector_version": "1.0.0",
+  "protocol_version": "agentbus-trigger/1",
+  "display_name": "ACP Standard Protocol Bridge (OpenCode / Gemini CLI / Cursor / Cline / Qwen / Claude ACP)",
+  "products": [
+    {
+      "product_id": "acp",
+      "vendor": "ACP Standard",
+      "channels": ["stable"],
+      "os": ["windows", "darwin", "linux"],
+      "min_version": "1.0.0"
+    },
+    {
+      "product_id": "opencode",
+      "vendor": "SST / Anomaly",
+      "channels": ["stable"],
+      "os": ["windows", "darwin", "linux"],
+      "min_version": "0.1.0"
+    },
+    {
+      "product_id": "gemini",
+      "vendor": "Google",
+      "channels": ["stable"],
+      "os": ["windows", "darwin", "linux"],
+      "min_version": "0.1.0"
+    },
+    {
+      "product_id": "cursor",
+      "vendor": "Anysphere",
+      "channels": ["stable"],
+      "os": ["windows", "darwin", "linux"],
+      "min_version": "0.45.0"
+    },
+    {
+      "product_id": "cline",
+      "vendor": "Cline Bot",
+      "channels": ["stable"],
+      "os": ["windows", "darwin", "linux"],
+      "min_version": "1.0.0"
+    },
+    {
+      "product_id": "qwen-code",
+      "vendor": "Alibaba Qwen",
+      "channels": ["stable"],
+      "os": ["windows", "darwin", "linux"],
+      "min_version": "0.1.0"
+    },
+    {
+      "product_id": "claude-acp",
+      "vendor": "Anthropic / Zed ACP",
+      "channels": ["stable"],
+      "os": ["windows", "darwin", "linux"],
+      "min_version": "0.1.0"
+    }
+  ],
+  "entry_kind": "host_bridge",
+  "execution_surface": "desktop_existing",
+  "transport": "stdio_jsonrpc",
+  "asset_refs": [],
+  "install_actions": [],
+  "activation": {
+    "reload_required": false,
+    "entrypoint": "acp_stdio_or_wake_signal"
+  },
+  "permission_requirements": [
+    "read_project",
+    "write_triggers"
+  ],
+  "declared_capabilities": {
+    "can_identify_target": true,
+    "can_check_project": true,
+    "can_submit_existing": true,
+    "can_route_exact_id": true,
+    "can_detect_busy": true,
+    "host_queue_verified": true,
+    "atomic_target_submit": true,
+    "can_report_native_start": true,
+    "can_report_native_finish": true,
+    "can_reconcile": true,
+    "can_cancel_owned_turn": false,
+    "cold_start_verified": true,
+    "requires_visible_target": false,
+    "requires_manual_bootstrap": false
+  },
+  "docs_refs": [
+    "https://agentclientprotocol.com"
+  ],
+  "maintenance": {
+    "maintainer": "AgentBus Core",
+    "uninstall_steps": "ACP connector requires no host installation files to remove"
+  }
+}

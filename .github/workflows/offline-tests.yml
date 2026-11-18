@@ -1,0 +1,25 @@
+name: Windows credential-free regression
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: '3.14'
+      - name: Run isolated no-model tests
+        shell: pwsh
+        run: python -B -X utf8 tools/check_offline.py
+      - name: CLI entry and offline compatibility metadata
+        shell: pwsh
+        run: |
+          python -B -X utf8 entry.py --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -B -X utf8 entry.py member catalog

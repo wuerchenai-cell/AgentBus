@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "任务拆解结果",
+  "type": "object",
+  "properties": {
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "description": "任务短标题" },
+          "body": { "type": "string", "description": "自包含的任务说明，接手的人只看到这段" },
+          "worker": { "type": "string", "description": "执行者名字" },
+          "result_to": { "type": "string", "description": "明确的结果收件人参与者 ID 或 human" },
+          "expected_artifacts": { "type": "array", "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 },
+            "description": "可选必交产物相对路径；只读评审可省略，成功回执须带核验清单" }
+        },
+        "required": ["title", "body", "worker", "result_to"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["tasks"],
+  "additionalProperties": false
+}

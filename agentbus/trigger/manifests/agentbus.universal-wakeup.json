@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "connector_id": "agentbus.universal-wakeup",
+  "connector_version": "1.0.0",
+  "protocol_version": "agentbus-trigger/1",
+  "display_name": "Universal Wakeup Connector (CLI Wait & Desktop Notification)",
+  "products": [
+    {
+      "product_id": "generic",
+      "vendor": "AgentBus Core",
+      "channels": ["stable"],
+      "os": ["windows", "darwin", "linux"],
+      "min_version": "1.0.0"
+    },
+    {
+      "product_id": "claude",
+      "vendor": "Anthropic",
+      "channels": ["stable"],
+      "os": ["windows", "darwin", "linux"],
+      "min_version": "1.0.0"
+    },
+    {
+      "product_id": "cursor",
+      "vendor": "Anysphere",
+      "channels": ["stable"],
+      "os": ["windows", "darwin", "linux"],
+      "min_version": "1.0.0"
+    },
+    {
+      "product_id": "windsurf",
+      "vendor": "Codeium",
+      "channels": ["stable"],
+      "os": ["windows", "darwin", "linux"],
+      "min_version": "1.0.0"
+    }
+  ],
+  "entry_kind": "host_bridge",
+  "execution_surface": "desktop_existing",
+  "transport": "file_channel",
+  "asset_refs": [],
+  "install_actions": [],
+  "activation": {
+    "reload_required": false,
+    "entrypoint": "wake_signal"
+  },
+  "permission_requirements": [
+    "read_project",
+    "write_triggers"
+  ],
+  "declared_capabilities": {
+    "can_identify_target": true,
+    "can_check_project": true,
+    "can_submit_existing": true,
+    "can_route_exact_id": true,
+    "can_detect_busy": false,
+    "host_queue_verified": true,
+    "atomic_target_submit": true,
+    "can_report_native_start": true,
+    "can_report_native_finish": false,
+    "can_reconcile": true,
+    "can_cancel_owned_turn": false,
+    "cold_start_verified": true,
+    "requires_visible_target": false,
+    "requires_manual_bootstrap": false
+  },
+  "docs_refs": [
+    "https://agentbus.local/docs/universal-wakeup"
+  ],
+  "maintenance": {
+    "maintainer": "AgentBus Core",
+    "uninstall_steps": "Universal connector requires no host files to uninstall"
+  }
+}

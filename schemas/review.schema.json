@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "任务验收结果",
+  "type": "object",
+  "properties": {
+    "verdict": { "type": "string", "enum": ["pass", "fail"] },
+    "reason": { "type": "string", "description": "判定理由，不通过时说明缺什么" }
+  },
+  "required": ["verdict", "reason"],
+  "additionalProperties": false
+}
