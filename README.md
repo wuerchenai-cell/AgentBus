@@ -1,41 +1,39 @@
 # AgentBus
 
-本地优先的多 Agent 文件协作工作台。项目目标、任务树、产物与交接记录保存在工程文件中，成员可以更换对话和接手者。独立 CLI、ACP、SDK 是可选接入方式；文件路线不要求所有软件都有无头接口。
+**把分散在不同 AI 对话里的工作，变成一棵可以分工、验收和接手的项目任务树。**
 
-## 日常使用
+AgentBus 是一个本地优先的多 Agent 协作工作台。任务、进度、交付文件和接手说明保存在工程目录里。更换 Agent 或重开聊天后，接手者可以从该任务的记录继续。
 
-1. 打开正式 `AgentBus.exe`，选择工程目录，勾选成员并指定组长。
-2. 与组长确定任务树，导入或打开工程已有的树。
-3. 选择由组长分派或手动分派；复制成员接入指令，发到对应软件的当前项目聊天。
-4. 成员认领任务、写产物、提交回执；在工作台查看进度、阻塞与接手说明。换聊天后从工程文件恢复。
+[下载与版本说明](https://github.com/wuerchenai-cell/AgentBus/releases) · [发布与更新](docs/public/RELEASE.md) · [接入方式](docs/public/ECOSYSTEM.md) · [安全反馈](docs/public/SECURITY.md)
 
-控制目录保存 `.agentbus/`；业务产出目录可以独立配置。复制指令、打开窗口或配置好入口，不代表成员已经执行。桌面对话结束后不会因为文件存在自动恢复推理；需要宿主入口或一次接手。
+## 适合做什么
 
-## 源码与验证
+- **多人分工**：把开发、测试、文档拆成有依赖的任务，由组长统一分派，或在工作台指定成员。
+- **跨对话接手**：原成员退出、换工具或用完额度时，新成员按任务编号读取当前进度、已有产物和下一步。
+- **交付和验收**：从任务树查看谁在执行、哪些任务受阻，以及已提交的文件。启用独立监督后，由另一名成员验收交付。
 
-文件协作核心使用 Python 标准库；可在 Python 3.12 或 3.14 下运行无模型测试。Windows 桌面采用 pywebview/WebView2；**正式冻结构建固定使用 Python 3.12** 及 `requirements-build.txt`。运行 EXE 不要求用户安装 Python。
+## Windows 工作台怎么用
+
+1. 打开 `AgentBus.exe`，选择工程目录、参与成员和组长。也可以把业务产出放在单独的目录。
+2. 让组长编制任务树，或导入已有任务树。选择组长分派或手动分派。
+3. 把工作台生成的接入指令发给成员。成员认领任务、提交产物和回执，工作台显示进度与接手信息。
+
+文件协作是通用入口。成员在自己的聊天中接手。需要自动发起新回合时，须另行验证该成员支持的 CLI、ACP 或 SDK 接入。
+
+**当前 GitHub Release 提供源码。** 使用下方步骤可先试用文件工作流。Windows 便携版发布后，可从 Releases 下载，更新提醒在桌面端 **帮助 → 检查更新…**。
+
+## 从源码体验任务树
+
+需要 Python 3.12 或 3.14。下面会创建一个独立的临时工程并预览模板，无需 Agent 账号。
 
 ```powershell
-python -B -X utf8 tools/check_offline.py --scope portable
-python -B -X utf8 entry.py --help
+$project = Join-Path ([IO.Path]::GetTempPath()) ('AgentBus-demo-' + [Guid]::NewGuid().ToString('N'))
+python -B -X utf8 entry.py init --workspace $project --members codex,workbuddy --coordinator codex
+python -B -X utf8 entry.py tree import --workspace $project --template software-project --preview
 ```
 
-portable 测试使用临时工程和模拟模型，不需要厂商账号；它不代替真实桌面、厂商接力或干净电脑验收。host 检查只可在明确指定正式工程和源码目录后执行，不能把别人的工程当成 CI 夹具。
+在源码根目录执行 `python -B -X utf8 tools/check_offline.py --scope portable` 可跑离线回归。Windows 桌面依赖 WebView2，冻结构建使用 Python 3.12，详情见[发布与更新](docs/public/RELEASE.md)。桌面、厂商和干净电脑验收单独记录。
 
-构建前准备独立 Python 3.12 环境并按固定依赖安装；构建工具不会自行安装依赖。`tools/build_release.py` 需要显式的 `--project-root` 指向已有正式安装的验收工程，并先通过源码清单、host、portable 和冻结 smoke。首次干净机器从源码构建尚需专门验收，不承诺一条缺参数的命令就能发布。
+## 开源许可
 
-## 更新与恢复
-
-当前采用人工取得可信发行包、正常关闭旧程序、原子替换并核对登记的方式。自动下载、签名验证和后台更新并未因本仓库存在而完成。任务和产物不随换程序删除。
-
-恢复前须确认原执行者已经停止。超期认领可以经明确管理命令退役，后续明确的新工作用关联新叶承接，旧失败、旧期限和审核记录保留；旧票据不能提交新任务。
-
-## 许可与边界
-
-Owner 已选择 Apache-2.0，用于有权授权的 AgentBus 自身源码，见根目录 `LICENSE` 与[许可状态](SOURCE_LICENSE_STATUS.md)。第三方组件及品牌素材单独适用其权利条件；现有材料尚未构成完整商业分发放行。
-
-- [发布与验收边界](docs/public/RELEASE.md)
-- [接入方案与外部生态](docs/public/ECOSYSTEM.md)
-- [安全反馈与信任边界](docs/public/SECURITY.md)
-
-本地源码包不含真实任务、聊天、安装登记或凭据。白名单导出与有限扫描只能说明本次检查范围，不能保证任何未来加入的内容都没有敏感信息。
+AgentBus 自有源码采用 Apache-2.0。第三方组件与品牌素材适用各自的许可。参见[许可范围](SOURCE_LICENSE_STATUS.md)。

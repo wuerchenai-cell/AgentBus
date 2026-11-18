@@ -33,22 +33,45 @@ class ReleaseUpdateTests(unittest.TestCase):
 
     def test_only_newer_stable_release_with_windows_package_is_announced(self):
         check = release_updates.check_for_update
-        self.assertEqual(check('agentbus-lab/AgentBus', '1.2.0', fetch=lambda _: release()),
+        self.assertEqual(check('agentbus-lab/AgentBus', '1.2.0', fetch=lambda _: [release()]),
                          {'status': 'update_available', 'current_version': '1.2.0',
                           'version': '1.10.0'})
         for tag in ('v1.2.0', 'v1.1.9', 'v0.8.1'):
             self.assertEqual(check('agentbus-lab/AgentBus', '1.2.0',
-                                   fetch=lambda _: release(tag))['status'], 'current')
+                                   fetch=lambda _: [release(tag)])['status'], 'current')
         for row in (release(prerelease=True), release(draft=True),
                     release('v1.10.0-rc.1')):
             self.assertEqual(check('agentbus-lab/AgentBus', '1.2.0',
-                                   fetch=lambda _: row)['status'], 'no_release')
+                                   fetch=lambda _: [row])['status'], 'no_release')
         self.assertEqual(check('agentbus-lab/AgentBus', '1.2.0',
-                               fetch=lambda _: release(assets=[]))['status'], 'no_asset')
+                               fetch=lambda _: [release(assets=[])])['status'], 'no_asset')
+
+    def test_selects_highest_windows_version_when_other_releases_are_newer(self):
+        rows = [
+            release('v2.5.0-source', prerelease=True, assets=[]),
+            release('v2.4.0', assets=[]),
+            release('v2.3.0', draft=True),
+            release('v1.9.0'),
+            release('v1.12.1'),
+        ]
+        result = release_updates.check_for_update('agentbus-lab/AgentBus', '1.2.0',
+                                                  fetch=lambda _: rows)
+        self.assertEqual(result, {'status': 'update_available', 'current_version': '1.2.0',
+                                  'version': '1.12.1'})
+        result = release_updates.check_for_update('agentbus-lab/AgentBus', '1.12.1',
+                                                  fetch=lambda _: list(reversed(rows)))
+        self.assertEqual(result['status'], 'current')
+
+    def test_invalid_release_list_does_not_report_current(self):
+        check = release_updates.check_for_update
+        self.assertEqual(check('agentbus-lab/AgentBus', '1.2.0',
+                               fetch=lambda _: {'unexpected': 'object'})['status'], 'unavailable')
+        self.assertEqual(check('agentbus-lab/AgentBus', '1.2.0',
+                               fetch=lambda _: [])['status'], 'no_release')
 
     def test_unconfigured_and_network_errors_do_not_claim_up_to_date(self):
         for repo in ('', 'https://example.org/x', 'ok/../no', 'owner/repo?token=demo'):
-            with patch.object(release_updates, '_fetch_latest') as fetch:
+            with patch.object(release_updates, '_fetch_releases') as fetch:
                 self.assertEqual(release_updates.check_for_update(repo, '1.2.0')['status'],
                                  'not_configured')
                 fetch.assert_not_called()
@@ -62,13 +85,13 @@ class ReleaseUpdateTests(unittest.TestCase):
                                                                fetch=fail)['status'], status)
 
     def test_http_fetch_uses_only_fixed_unauthenticated_metadata_endpoint(self):
-        body = io.BytesIO(json.dumps(release()).encode('utf-8'))
+        body = io.BytesIO(json.dumps([release()]).encode('utf-8'))
         with patch.object(release_updates, 'build_opener') as opener:
             opener.return_value.open.return_value = body
             result = release_updates.check_for_update('agentbus-lab/AgentBus', '1.2.0')
             request = opener.return_value.open.call_args.args[0]
             self.assertEqual(request.full_url,
-                             'https://api.github.com/repos/agentbus-lab/AgentBus/releases/latest')
+                             'https://api.github.com/repos/agentbus-lab/AgentBus/releases?per_page=20')
             self.assertEqual(request.get_method(), 'GET')
             self.assertNotIn('authorization', {k.lower() for k, _ in request.header_items()})
             self.assertIsNone(request.data)
@@ -83,7 +106,7 @@ class ReleaseUpdateTests(unittest.TestCase):
 
     def test_opt_in_and_daily_limit_survive_new_bridge_instances(self):
         with patch.object(release_updates, 'GITHUB_RELEASE_REPOSITORY', 'agentbus-lab/AgentBus'), \
-             patch.object(release_updates, '_fetch_latest', return_value=release()) as fetch:
+             patch.object(release_updates, '_fetch_releases', return_value=[release()]) as fetch:
             first = WebBridge(self.root)
             self.assertEqual(first.call('check_release', {'automatic': True})['data']['status'], 'disabled')
             self.assertFalse(self.state.exists())
@@ -99,8 +122,8 @@ class ReleaseUpdateTests(unittest.TestCase):
 
     def test_only_verified_release_page_is_opened_on_request(self):
         with patch.object(release_updates, 'GITHUB_RELEASE_REPOSITORY', 'agentbus-lab/AgentBus'), \
-             patch.object(release_updates, '_fetch_latest', return_value=release(
-                 html_url='https://example.org/not-used')) as fetch, \
+             patch.object(release_updates, '_fetch_releases', return_value=[release(
+                 html_url='https://example.org/not-used')]) as fetch, \
              patch.object(release_updates.webbrowser, 'open', return_value=True) as browser:
             bridge = WebBridge(self.root)
             self.assertFalse(bridge.call('open_release_page', {})['ok'])
@@ -116,14 +139,14 @@ class ReleaseUpdateTests(unittest.TestCase):
         def fetch(_):
             self.assertTrue(bridge._lock.acquire(blocking=False))
             bridge._lock.release()
-            return release()
+            return [release()]
         # A separate thread checks the lock, because the workbench lock supports reentry.
         import concurrent.futures
         def inspect(_):
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 return pool.submit(fetch, None).result(timeout=2)
         with patch.object(release_updates, 'GITHUB_RELEASE_REPOSITORY', 'agentbus-lab/AgentBus'), \
-             patch.object(release_updates, '_fetch_latest', side_effect=inspect):
+             patch.object(release_updates, '_fetch_releases', side_effect=inspect):
             bridge = WebBridge(self.root)
             self.assertEqual(bridge.call('check_release', {})['data']['status'], 'update_available')
 

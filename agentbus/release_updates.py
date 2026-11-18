@@ -49,9 +49,9 @@ def _version_tuple(value: str) -> tuple[int, int, int] | None:
     return int(major), int(minor), int(patch)
 
 
-def _fetch_latest(repository: str) -> dict:
+def _fetch_releases(repository: str) -> list:
     request = Request(
-        f"https://api.github.com/repos/{repository}/releases/latest",
+        f"https://api.github.com/repos/{repository}/releases?per_page=20",
         headers={"Accept": "application/vnd.github+json",
                  "X-GitHub-Api-Version": "2026-03-10",
                  "User-Agent": "AgentBus-release-check"},
@@ -79,30 +79,40 @@ def check_for_update(repository: str, current_version: str, *, fetch=None) -> di
     if local is None:
         return {**result, "status": "unavailable"}
     try:
-        release = (fetch or _fetch_latest)(repository)
+        releases = (fetch or _fetch_releases)(repository)
     except HTTPError as exc:
         exc.close()
         return {**result, "status": "no_release" if exc.code == 404 else "unavailable"}
     except (URLError, TimeoutError, ConnectionError, ssl.SSLError, http.client.HTTPException,
             UnicodeDecodeError, json.JSONDecodeError, RecursionError, _MetadataTooLarge):
         return {**result, "status": "unavailable"}
-    if not isinstance(release, dict):
+    if not isinstance(releases, list):
         return {**result, "status": "unavailable"}
-    tag = release.get("tag_name")
-    remote = _version_tuple(tag[1:]) if isinstance(tag, str) and tag.startswith("v") else None
-    if remote is None or release.get("draft") is not False or release.get("prerelease") is not False:
-        return {**result, "status": "no_release"}
-    if remote <= local:
+
+    stable_found = False
+    windows_versions = []
+    for release in releases:
+        if (not isinstance(release, dict) or release.get("draft") is not False
+                or release.get("prerelease") is not False):
+            continue
+        tag = release.get("tag_name")
+        remote = _version_tuple(tag[1:]) if isinstance(tag, str) and tag.startswith("v") else None
+        if remote is None:
+            continue
+        stable_found = True
+        assets = release.get("assets")
+        if isinstance(assets, list) and any(
+            isinstance(asset, dict) and asset.get("name") == WINDOWS_ASSET
+            and asset.get("state") == "uploaded" and type(asset.get("size")) is int and asset["size"] > 0
+            for asset in assets
+        ):
+            windows_versions.append(remote)
+    if not windows_versions:
+        return {**result, "status": "no_asset" if stable_found else "no_release"}
+    newest = max(windows_versions)
+    if newest <= local:
         return {**result, "status": "current"}
-    assets = release.get("assets")
-    has_windows_package = isinstance(assets, list) and any(
-        isinstance(asset, dict) and asset.get("name") == WINDOWS_ASSET
-        and asset.get("state") == "uploaded" and type(asset.get("size")) is int and asset["size"] > 0
-        for asset in assets
-    )
-    if not has_windows_package:
-        return {**result, "status": "no_asset"}
-    return {**result, "status": "update_available", "version": tag[1:]}
+    return {**result, "status": "update_available", "version": ".".join(map(str, newest))}
 
 
 class ReleaseUpdates:

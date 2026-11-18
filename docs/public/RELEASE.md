@@ -17,6 +17,8 @@
 
 ## 公开源码与 Windows 版本更新
 
+从[项目 Releases](https://github.com/wuerchenai-cell/AgentBus/releases)获取发布包。标有“源码预览”的发行用于学习、试用文件工作流与提交反馈。Windows 正式发行使用 `vX.Y.Z` 标签，并随附 `AgentBus-win-x64-green.zip` 与校验清单。
+
 公开 GitHub 仓库采用 Apache-2.0 发布可授权的 AgentBus 自有源码。公开源码使用白名单导出，以同一份受测源码作为发布输入。不要把实际工程、构建环境或二进制提交到 Git。Windows 便携包在第三方分发权和发行范围确认后，作为 GitHub Release 附件提供。
 
 首次准备公开构建时，在 `agentbus/release_updates.py` 的 `GITHUB_RELEASE_REPOSITORY` 填发布者控制的 `owner/repo`。同一次交付使用 `agentbus/__init__.py` 中的版本号，Git 标签写成 `v主版本.次版本.修订版本`（例如 `v1.2.0`）。每次重新发布要使用新版本号，不能用同一个标签更换包。已安装的旧程序若尚未包含更新检查，需要先手动安装一次支持该功能的版本。
@@ -28,7 +30,7 @@
 
 用户可在 **帮助 → 检查更新…** 手动查询。启用自动检查后，程序打开时及长开期间可在后台检查，自动请求最多每天一次；关掉后仍可手动查。检查只请求发布仓库的公开元数据。离线、限流或服务错误时保留当前使用状态；仅有草稿、预发行版、同版、旧版或缺少 Windows 包时不提示安装。发现新版本时由用户打开发布页、核对包并手动安装。
 
-GitHub 的 Latest API 可匿名读取公开发布，不需要 AgentBus 用户登录。[GitHub Releases API](https://docs.github.com/en/rest/releases/releases#get-the-latest-release)。维护者可在 GitHub 发布页设定 Latest，或使用 [GitHub CLI 发布选项](https://cli.github.com/manual/gh_release_create)。
+更新检查匿名读取最近 20 条公开发行记录，按版本号选择最高的正式 Windows 发行。源码预览、测试版或缺少便携包的发行会被跳过。[GitHub Releases API](https://docs.github.com/en/rest/releases/releases#list-releases)。维护者可在 GitHub 发布页设定 Latest，或使用 [GitHub CLI 发布选项](https://cli.github.com/manual/gh_release_create)。
 
 ## 当前商业交付差距
 
