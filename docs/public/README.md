@@ -4,7 +4,7 @@
 
 AgentBus 是一个本地优先的多 Agent 协作工作台。任务、进度、交付文件和接手说明保存在工程目录里。更换 Agent 或重开聊天后，接手者可以从该任务的记录继续。
 
-[下载与版本说明](https://github.com/wuerchenai-cell/AgentBus/releases) · [发布与更新](RELEASE.md) · [接入方式](ECOSYSTEM.md) · [安全反馈](SECURITY.md)
+[**直接下载 Windows 版 AgentBus.exe**](https://github.com/wuerchenai-cell/AgentBus/releases/latest/download/AgentBus.exe) · [下载与版本说明](https://github.com/wuerchenai-cell/AgentBus/releases) · [发布与更新](RELEASE.md) · [接入方式](ECOSYSTEM.md) · [安全反馈](SECURITY.md)
 
 ## 适合做什么
 
