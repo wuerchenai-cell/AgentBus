@@ -196,7 +196,7 @@ def _write_state(state_file: Path, state: dict) -> bool:
 
 
 def automatic_release_checks() -> bool:
-    return _read_state(state_path()).get('automatic_release_checks') is True
+    return _read_state(state_path()).get('automatic_release_checks', True) is True
 
 
 def save_automatic_release_checks(enabled: bool, path: Path | str | None = None) -> bool:
@@ -209,25 +209,6 @@ def save_automatic_release_checks(enabled: bool, path: Path | str | None = None)
         state = _read_state(state_file)
         state['automatic_release_checks'] = enabled
         return _write_state(state_file, state)
-
-
-def begin_automatic_release_check(repository: str, now: float) -> str:
-    """Reserve today's automatic check across windows and restarts."""
-    state_file = state_path()
-    if not automatic_release_checks():
-        return 'disabled'
-    with _STATE_LOCK, _interprocess_lock(state_file) as locked:
-        if not locked:
-            return 'deferred'
-        state = _read_state(state_file)
-        if state.get('automatic_release_checks') is not True:
-            return 'disabled'
-        previous = state.get('release_check_at')
-        if (state.get('release_check_repository') == repository
-                and type(previous) in (int, float) and 0 <= now - previous < 86400):
-            return 'deferred'
-        state.update(release_check_at=now, release_check_repository=repository)
-        return 'due' if _write_state(state_file, state) else 'deferred'
 
 
 def load_last_workspace(path: Path | str | None = None) -> str:

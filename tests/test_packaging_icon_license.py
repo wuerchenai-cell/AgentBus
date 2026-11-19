@@ -65,10 +65,16 @@ class PinnedSoftwareLicenseEvidenceTests(unittest.TestCase):
                 found[name]=item
         self.assertEqual(set(found),names)
 
-    def test_proxy_source_conflict_is_not_claimed_resolved(self):
-        notice=_read(_NOTICE)
-        for token in ('源码头部','BSD','MIT','0.1.0','未解决'):
-            self.assertIn(token,notice)
+    def test_proxy_license_is_bound_to_the_exact_upstream_source_commit(self):
+        import json
+        root = _NOTICE.parent
+        data = json.loads(_read(root / 'licenses/provenance.json'))
+        proxy = next(item for item in data['files'] if item['component'] == 'proxy-tools')
+        commit = '77369e4d321ed7b10d7b6e4885d7fe7a7ec2dfb7'
+        self.assertIn(f'/{commit}/LICENSE.txt', proxy['source'])
+        self.assertEqual(hashlib.sha256((root / proxy['path']).read_bytes()).hexdigest(), proxy['sha256'])
+        for token in (commit, 'proxy_tools/__init__.py', 'BSD', 'MIT'):
+            self.assertIn(token, _read(_NOTICE))
 
     def test_observed_frozen_build_packages_have_license_materials(self):
         import json

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "collected_at": "2026-11-16",
-  "coverage": "listed original license texts, fixed native source commits and bundled Codex/ripgrep version binding; Ratatui version derived from release Cargo.lock; WebView2 SDK DLL binding retained; not a complete native or Codex transitive-binary license audit; proxy-tools BSD/MIT conflict unresolved; includes observed frozen build-package and setuptools vendored license/NOTICE originals, not a full linked dependency determination",
+  "coverage": "listed original license texts, fixed native source commits and bundled Codex/ripgrep version binding; Ratatui version derived from release Cargo.lock; WebView2 SDK DLL binding retained; not a complete native or Codex transitive-binary license audit; proxy-tools bundled source and BSD license verified at the same upstream commit; PyPI metadata says MIT; includes observed frozen build-package and setuptools vendored license/NOTICE originals, not a full linked dependency determination",
   "files": [
     {
       "path": "licenses/altgraph-LICENSE.txt",
@@ -83,8 +83,8 @@
     {
       "path": "licenses/proxy-tools-LICENSE.txt",
       "component": "proxy-tools",
-      "version": "0.1.0 source header and MIT metadata conflict unresolved; archived upstream BSD text",
-      "source": "https://raw.githubusercontent.com/jtushman/proxy_tools/ccd35a569b95bec271a59890780c7821756c548a/LICENSE.txt",
+      "version": "0.1.0; exact module and BSD license verified at upstream commit 77369e4d321ed7b10d7b6e4885d7fe7a7ec2dfb7",
+      "source": "https://raw.githubusercontent.com/jtushman/proxy_tools/77369e4d321ed7b10d7b6e4885d7fe7a7ec2dfb7/LICENSE.txt",
       "sha256": "a428fb8a2e762af3eb0a6edbbb88e9b42ccfee80fd9b423958bcacf9b9abbfe4"
     },
     {

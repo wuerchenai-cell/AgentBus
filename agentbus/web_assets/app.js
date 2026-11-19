@@ -4313,6 +4313,7 @@
     deferred: '更新检查已暂缓，请稍后重试。'
   };
   let availableReleaseVersion = '';
+  let pendingReleaseNotice = null;
   let releaseCheck = null;
   let releasePreferenceSave = null;
 
@@ -4330,10 +4331,12 @@
         const isNewNotice = availableReleaseVersion !== version;
         availableReleaseVersion = version;
         if (automatic && isNewNotice) {
-          toast(`AgentBus 有新版本 ${version} · 查看更新`, false, () => showReleaseDialog());
+          pendingReleaseNotice = {version, current: string(result.current_version).trim()};
+          showPendingReleaseNotice();
         }
       } else if (['current', 'no_release', 'no_asset', 'not_configured'].includes(result?.status)) {
         availableReleaseVersion = '';
+        pendingReleaseNotice = null;
       }
       const indicator = $('releaseUpdateIndicator');
       indicator.hidden = !availableReleaseVersion;
@@ -4343,6 +4346,42 @@
       if (releaseCheck === request) releaseCheck = null;
     });
     return request.promise;
+  }
+
+  async function openReleaseDownload() {
+    const result = await call('open_release_page', {}, {quiet:true});
+    if (result?.opened !== true) throw new Error('发布页面未打开');
+  }
+
+  function showPendingReleaseNotice() {
+    if (!pendingReleaseNotice || $('workspaceDialog').open) return;
+    const {version, current} = pendingReleaseNotice;
+    pendingReleaseNotice = null;
+    const content = openDialog('发现新版本', 'AgentBus 更新');
+    const noticeDialog = dialogVersion;
+    const message = el('p', 'panel-intro', `AgentBus ${version} 已发布。当前版本 ${current}。`);
+    const status = el('p', 'error-note');
+    status.setAttribute('role', 'alert');
+    status.hidden = true;
+    const later = el('button', 'button', '稍后');
+    const download = el('button', 'button primary', '前往下载');
+    later.type = download.type = 'button';
+    later.addEventListener('click', closeDialog);
+    download.addEventListener('click', async () => {
+      download.disabled = true;
+      status.hidden = true;
+      try {
+        await openReleaseDownload();
+        if (noticeDialog === dialogVersion) closeDialog();
+      } catch {
+        status.textContent = '暂时无法打开 GitHub 发布页，请重试。';
+        status.hidden = false;
+      } finally {
+        download.disabled = false;
+      }
+    });
+    append(content, message, status, append(el('div', 'dialog-action-row'), later, download));
+    later.focus();
   }
 
   function startAutomaticReleaseChecks() {
@@ -4363,14 +4402,14 @@
     automatic.type = 'checkbox';
     const automaticLabel = el('label', 'member-checkbox', '启动时自动检查更新');
     automaticLabel.prepend(automatic);
-    automaticLabel.title = '启动后检查更新，应用保持打开时每天最多自动检查一次';
+    automaticLabel.title = '每次打开软件时检查更新，保持打开时每 24 小时再检查';
     const preferenceError = el('p', 'error-note');
     preferenceError.hidden = true;
     preferenceError.setAttribute('role', 'alert');
     const status = el('p', 'panel-intro', '正在读取更新设置…');
     status.setAttribute('role', 'status');
     const check = el('button', 'button primary', '立即检查');
-    const releasePage = el('button', 'button', '打开发布页面');
+    const releasePage = el('button', 'button', '前往下载');
     check.type = releasePage.type = 'button';
     append(content, installed, automaticLabel, preferenceError, status, append(el('div', 'dialog-action-row'), check, releasePage));
 
@@ -4429,8 +4468,7 @@
       busy = true;
       renderControls();
       try {
-        const result = await call('open_release_page', {}, {quiet:true});
-        if (result?.opened !== true) throw new Error('发布页面未打开');
+        await openReleaseDownload();
       } catch {
         if (isCurrent()) status.textContent = '暂时无法打开发布页面，请重新检查更新。';
       } finally {
@@ -4899,6 +4937,7 @@
   if(leafSearchInput){leafSearchInput.addEventListener('input',()=>{searchQuery=leafSearchInput.value.trim();applyFocus();});}
   $('closeDetail').addEventListener('click',closeDetail);
   if($('drawerWidthToggle'))$('drawerWidthToggle').addEventListener('click',toggleDrawerWide);
+  $('workspaceDialog').addEventListener('close', showPendingReleaseNotice);
   $('closeDialog').addEventListener('click',closeDialog);$('workspaceDialog').addEventListener('cancel',()=>{dialogVersion++;lastDialogInvoker?.focus();});
   $('zoomIn').addEventListener('click',()=>zoom(scale*1.2));$('zoomOut').addEventListener('click',()=>zoom(scale/1.2));$('resetView').addEventListener('click',reset);$('fitView').addEventListener('click',fit);
   if($('tidyView'))$('tidyView').addEventListener('click',handleTidyUp);

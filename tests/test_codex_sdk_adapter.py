@@ -71,6 +71,28 @@ class FakeCodex:
         self.closed = True
 
 
+class ExternalCodexRuntimeTests(unittest.TestCase):
+    def test_frozen_sdk_can_find_a_separately_installed_executable(self):
+        from agentbus.codex_sdk import _resolve_sdk_codex_bin
+        with tempfile.TemporaryDirectory() as folder:
+            executable = Path(folder) / 'codex.exe'
+            executable.touch()
+            with patch.object(sys, 'frozen', True, create=True), \
+                 patch('importlib.util.find_spec', return_value=None), \
+                 patch('agentbus.adapters.resolve_codex', return_value=executable):
+                self.assertEqual(_resolve_sdk_codex_bin(None), executable)
+                self.assertEqual(_resolve_sdk_codex_bin(executable), executable)
+
+    def test_frozen_sdk_reports_missing_external_runtime(self):
+        from agentbus.adapters import AdapterError
+        from agentbus.codex_sdk import _resolve_sdk_codex_bin
+        with patch.object(sys, 'frozen', True, create=True), \
+             patch('importlib.util.find_spec', return_value=None), \
+             patch('agentbus.adapters.resolve_codex', return_value=None):
+            with self.assertRaisesRegex(AdapterError, 'Codex CLI'):
+                _resolve_sdk_codex_bin(None)
+
+
 class CodexSDKAdapterTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

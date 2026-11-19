@@ -92,7 +92,7 @@ class Element{
   blur(){document.activeElement=document.body;}
   select(){}
   showModal(){this.open=true;}
-  close(){this.open=false;}
+  close(){this.open=false;queueMicrotask(()=>{void this.fire('close');});}
   getBoundingClientRect(){return {width:1200,height:640,left:0,top:0};}
   scrollIntoView(options){this._scrollIntoView=options;}
   getTotalLength(){return 120;}
@@ -121,6 +121,8 @@ const backend=async(action,payload)=>{
   if(pendingApi&&action===pendingApi.action)return pendingApi.promise;
   let data;
   if(action==='snapshot')data=clone(current);
+  else if(action==='check_release')data=clone(input.releaseCheck||{status:'no_release'});
+  else if(action==='open_release_page')data={opened:true};
   else if(action==='append_leaf'){
     const leaf={id:'new-leaf',parent_id:payload.parent_id,section_no:'1.3',
       title:payload.title,goal:payload.goal,state:'queued',claimable:true,
@@ -173,7 +175,7 @@ class TaskflowFrontendTests(unittest.TestCase):
                scan_candidates=None, saved_viewport=None, reduced_motion=False, queue_frames=False,
                ui_state=None, initial_leaf_state=None, initial_leaf_owner=None,
                initial_operator_can_record=None,
-               initial_result_id=None):
+               initial_result_id=None, release_check=None):
         parser = _HTMLTree()
         parser.feed((ASSETS / 'index.html').read_text(encoding='utf-8'))
         snapshot = {
@@ -220,7 +222,7 @@ class TaskflowFrontendTests(unittest.TestCase):
                    'dom': parser.root, 'snapshot': snapshot, 'online': online,
                    'storage': storage or {}, 'scanCandidates': scan_candidates or [],
                    'savedViewport': saved_viewport, 'reducedMotion': reduced_motion,
-                   'queueFrames': queue_frames}
+                   'queueFrames': queue_frames, 'releaseCheck': release_check}
         node_bin = shutil.which('node')
         if not node_bin:
             self.skipTest("环境缺少 node.js 执行器，跳过前端无头运行断言")
@@ -230,6 +232,51 @@ class TaskflowFrontendTests(unittest.TestCase):
                                 timeout=15)
         self.assertEqual(result.returncode, 0, result.stderr)
         return json.loads(result.stdout)
+
+    def test_startup_only_prompts_for_new_windows_release_and_download_is_user_initiated(self):
+        update = {'status': 'update_available', 'current_version': '1.2.0', 'version': '1.2.1'}
+        result = self.run_ui(r"""
+const dialog=$('workspaceDialog'), content=$('dialogContent');
+const download=findText(content,'button','前往下载');
+const before=calls.filter(c=>c.action==='open_release_page').length;
+const opened=dialog.open;
+const title=$('dialogTitle').textContent;
+const message=content.textContent;
+if(download)await download.fire('click');
+console.log(JSON.stringify({opened,title,message,before,hasDownload:Boolean(download),
+  checks:calls.filter(c=>c.action==='check_release'),
+  downloads:calls.filter(c=>c.action==='open_release_page')}));
+""", release_check=update)
+        self.assertEqual(result['checks'], [{'action': 'check_release', 'payload': {'automatic': True}}])
+        self.assertTrue(result['opened'])
+        self.assertIn('新版本', result['title'])
+        self.assertIn('1.2.1', result['message'])
+        self.assertTrue(result['hasDownload'])
+        self.assertEqual(result['before'], 0)
+        self.assertEqual(result['downloads'], [{'action': 'open_release_page', 'payload': {}}])
+        for status in ('current', 'no_release', 'unavailable', 'disabled'):
+            with self.subTest(status=status):
+                quiet = self.run_ui(r"""
+console.log(JSON.stringify({opened:$('workspaceDialog').open,
+  calls:calls.filter(c=>c.action==='open_release_page')}));
+""", release_check={'status': status})
+                self.assertEqual(quiet, {'opened': False, 'calls': []})
+
+    def test_startup_update_waits_for_an_open_dialog_and_can_be_dismissed(self):
+        result = self.run_ui(r"""
+await $('menuCheckRelease').fire('click');
+const before=$('dialogTitle').textContent;
+window.pywebview={api:{call:backend}};
+await fireWindow('pywebviewready');
+const whileBusy=$('dialogTitle').textContent;
+await $('closeDialog').fire('click');
+const after=$('dialogTitle').textContent;
+await findText($('dialogContent'),'button','稍后').fire('click');
+console.log(JSON.stringify({before,whileBusy,after,open:$('workspaceDialog').open,
+  indicator:$('releaseUpdateIndicator').hidden,downloads:calls.filter(c=>c.action==='open_release_page')}));
+""", online=False, release_check={'status': 'update_available', 'current_version': '1.2.0', 'version': '1.2.1'})
+        self.assertEqual(result, {'before': '检查更新', 'whileBusy': '检查更新',
+                                  'after': '发现新版本', 'open': False, 'indicator': False, 'downloads': []})
 
     def test_number_visible_in_tree_drawer_and_search(self):
         result = self.run_ui(r"""

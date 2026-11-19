@@ -17,7 +17,7 @@
 
 ## 公开源码与 Windows 版本更新
 
-从[项目 Releases](https://github.com/wuerchenai-cell/AgentBus/releases)获取发布包。标有“源码预览”的发行用于学习、试用文件工作流与提交反馈。Windows 正式发行使用 `vX.Y.Z` 标签，并随附 `AgentBus-win-x64-green.zip` 与校验清单。
+从[项目 Releases](https://github.com/wuerchenai-cell/AgentBus/releases)获取发布包。标有“源码预览”的发行用于学习、试用文件工作流与提交反馈。Windows x64 正式发行使用 `vX.Y.Z` 标签，随附独立 `AgentBus.exe`、包含许可与上手说明的 `AgentBus-win-x64-green.zip`、`SHA256SUMS.txt`。优先下载 ZIP 并解压后运行。
 
 公开 GitHub 仓库采用 Apache-2.0 发布可授权的 AgentBus 自有源码。公开源码使用白名单导出，以同一份受测源码作为发布输入。不要把实际工程、构建环境或二进制提交到 Git。Windows 便携包在第三方分发权和发行范围确认后，作为 GitHub Release 附件提供。
 
@@ -28,9 +28,13 @@
 3. 正式发布时标记为 **Latest**。测试包标为 **Pre-release**，仅发源码且无 Windows 便携包的版本不应替代已有 Windows 最新版本。发布后用旧版客户端实查一次，确认会提示新版，并能打开正确的发布页。
 4. 紧急修正时发布更高版本并保留前一个可信版本供手动回退。更新提醒只接受更高的正式版本，用户可在核对后手动恢复原包，并刷新工程和曾安装的用户级工作流登记。
 
-用户可在 **帮助 → 检查更新…** 手动查询。启用自动检查后，程序打开时及长开期间可在后台检查，自动请求最多每天一次；关掉后仍可手动查。检查只请求发布仓库的公开元数据。离线、限流或服务错误时保留当前使用状态；仅有草稿、预发行版、同版、旧版或缺少 Windows 包时不提示安装。发现新版本时由用户打开发布页、核对包并手动安装。
+用户可在 **帮助 → 检查更新…** 手动查询。默认在每次启动时后台检查，程序保持打开时每 24 小时再检查。发现更高的正式 Windows 版本时弹出提示，点击「前往下载」打开该版本的 GitHub 发布页。关闭自动检查后仍可手动查询。检查只请求发布仓库的公开元数据。离线、限流或服务错误时保留当前使用状态；仅有草稿、预发行版、同版、旧版或缺少 Windows 包时不提示安装。用户可在发布页核对并自行下载安装。
 
 更新检查匿名读取最近 20 条公开发行记录，按版本号选择最高的正式 Windows 发行。源码预览、测试版或缺少便携包的发行会被跳过。[GitHub Releases API](https://docs.github.com/en/rest/releases/releases#list-releases)。维护者可在 GitHub 发布页设定 Latest，或使用 [GitHub CLI 发布选项](https://cli.github.com/manual/gh_release_create)。
+
+## 公开 Windows 包的构建配置
+
+在固定的 Python 3.12 构建环境中使用 `tools/build_release.py --external-codex-runtime`。该配置纳入 Codex Python SDK，SDK 执行使用另行安装的官方 `codex.exe`。文件协作入口可以直接使用，团队接入支持选择本地 Codex 程序。Windows 端使用 Microsoft WebView2，发布包使用 AgentBus 项目自有图标。
 
 ## 当前商业交付差距
 

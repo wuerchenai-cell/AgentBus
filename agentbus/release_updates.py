@@ -20,6 +20,7 @@ GITHUB_RELEASE_REPOSITORY = "wuerchenai-cell/AgentBus"
 WINDOWS_ASSET = "AgentBus-win-x64-green.zip"
 _MAX_RESPONSE_BYTES = 512 * 1024
 _NETWORK_TIMEOUT_S = 5
+_AUTOMATIC_CHECK_INTERVAL_S = 24 * 60 * 60
 _REPOSITORY = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?/[A-Za-z0-9_.-]{1,100}", re.ASCII)
 _VERSION = re.compile(r"(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})", re.ASCII)
 
@@ -121,6 +122,7 @@ class ReleaseUpdates:
     def __init__(self):
         self._check_lock = threading.Lock()
         self._release_page = None
+        self._next_automatic_check = None
 
     def preferences(self) -> dict:
         configured = configured_repository(GITHUB_RELEASE_REPOSITORY)
@@ -146,9 +148,12 @@ class ReleaseUpdates:
             return {"current_version": __version__, "status": "deferred"}
         try:
             if automatic:
-                status = gui_state.begin_automatic_release_check(repository, time.time())
-                if status != "due":
-                    return {"current_version": __version__, "status": status}
+                if not gui_state.automatic_release_checks():
+                    return {"current_version": __version__, "status": "disabled"}
+                now = time.monotonic()
+                if self._next_automatic_check is not None and now < self._next_automatic_check:
+                    return {"current_version": __version__, "status": "deferred"}
+                self._next_automatic_check = now + _AUTOMATIC_CHECK_INTERVAL_S
             result = check_for_update(repository, __version__)
             if result["status"] == "update_available":
                 self._release_page = f"https://github.com/{repository}/releases/tag/v{result['version']}"

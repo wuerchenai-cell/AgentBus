@@ -2,18 +2,18 @@
 
 来源：AgentBus 构建依赖与上游官方仓库；初始归档：2026-10-09；固定版本证据更新：2026-11-16。
 
-这个分发包保留已收集的原始许可证文本。`licenses/provenance.json` 逐项记录组件、版本、来源及 SHA256，不记录构建电脑路径。
+公开 Windows 包保留已收集的原始许可证文本。此包携带 Codex Python SDK，由本机独立安装的官方 Codex CLI 执行；Codex CLI、ripgrep 与 Ratatui 的归档材料供来源核对。`licenses/provenance.json` 逐项记录组件、版本、来源及 SHA256，不记录构建电脑路径。
 
-- Codex Python SDK 与随包 CLI 0.157.1：本机 wheel metadata 声明 Apache-2.0；wheel 未携带 LICENSE 正文。归档官方 OpenAI Codex rust-v0.157.1 对应固定提交的 LICENSE 与 NOTICE，原文与既有归档逐字节一致，保留其对 Ratatui 的声明。冻结程序所带codex.exe与0.157.1安装制品逐字节核对，并仅运行--version确认版本。
+- Codex Python SDK 0.157.1：wheel 元数据声明 Apache-2.0，包内保留 OpenAI Codex 固定版本的 LICENSE 和 NOTICE 原文。官方 CLI 及其依赖由各上游分发。
 - Python 3.12.14：实际 WebView2 构建发行版的 LICENSE.txt（包含该发行版提供的声明）。
 - Tcl/Tk 8.6：旧界面兼容模块使用的构建发行版 license.terms。
 - pydantic、pydantic-core、annotated-types、typing-extensions、typing-inspection、packaging：原安装 wheel 提供的许可证。
 - PyInstaller：原发行版 COPYING.txt，包含其 bootloader 分发例外。
-- ripgrep 15.2.0：随 Codex runtime 打包的 rg.exe与安装制品逐字节一致，仅运行--version得到版本与提交前缀，再与官方15.2.0标签提交核对；MIT与UNLICENSE来源已固定到该提交。
-- Ratatui 0.30.2：版本来自Codex 0.157.1固定提交的Cargo.lock；crates.io原始crate摘要与锁文件一致，LICENSE与crate记录的固定源码提交及既有归档逐字节一致。锁文件只证明发布源码的依赖选择，不证明全部crate都进入本二进制，也不构成完整传递清单。
+- ripgrep 15.2.0：此公开包仅保留固定源码版本的 MIT 与 UNLICENSE 原文供参考。
+- Ratatui 0.30.2：此公开包保留固定源码版本的 LICENSE 及官方 Codex NOTICE 供参考。
 - pywebview 6.2.1、cffi 2.1.1、bottle 0.13.4、pycparser 3.1：实际安装 wheel 的原始许可证。
 - pythonnet 3.0.5、clr-loader 0.2.8：对应上游版本标签的 MIT LICENSE；wheel 未携带正文。
-- proxy-tools 0.1.0：安装源码与官方PyPI 0.1.0 sdist逐字节一致；源码头部写BSD，而sdist的setup.py/PKG-INFO及安装元数据均写MIT。sdist没有LICENSE文件。现有BSD正文另从上游固定提交取得且与既有归档逐字节一致，不能冒称来自sdist；冲突仍未解决，不擅自择一或声明商业放行。
+- proxy-tools 0.1.0：构建环境模块与上游提交 `77369e4d321ed7b10d7b6e4885d7fe7a7ec2dfb7` 的 `proxy_tools/__init__.py` 逐字节一致。同一提交的 `LICENSE.txt` 与本包保留的 BSD 原文一致，包含 Armin Ronacher 与 Jonathan Tushman 的版权声明。PyPI 元数据另写 MIT，本包保留该实际代码对应的上游 BSD 许可。
 - Microsoft.Web.WebView2 SDK 1.0.3856.49：官方 NuGet 包的 LICENSE.txt。随 pywebview 打包的 Core/WinForms/Win-x64 Loader DLL 与该包逐字节 SHA256 一致；系统 Evergreen Runtime 由微软独立安装，不随本包分发。
 
 ## 冻结程序中观察到的构建与内嵌组件

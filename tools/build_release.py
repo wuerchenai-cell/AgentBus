@@ -73,8 +73,8 @@ def validate_share_assets(root: Path) -> None:
             raise ValueError('Release license hash mismatch: ' + relative)
 
 
-def build_command(root: Path, build_dir: Path, dist_dir: Path, sdk_runtime: Path) -> list[str]:
-    root, build_dir, dist_dir, sdk_runtime = map(Path, (root, build_dir, dist_dir, sdk_runtime))
+def build_command(root: Path, build_dir: Path, dist_dir: Path, sdk_runtime: Path | None) -> list[str]:
+    root, build_dir, dist_dir = map(Path, (root, build_dir, dist_dir))
     root = root.resolve()
     for output in [build_dir, dist_dir]:
         resolved = output.resolve()
@@ -83,7 +83,10 @@ def build_command(root: Path, build_dir: Path, dist_dir: Path, sdk_runtime: Path
     from tools.export_source import APP_ICON_FILE, WEB_ASSET_FILES
     required = [root / 'entry.py', root / 'schemas/plan.schema.json',
                 root / 'skills/agentbus-team/SKILL.md', root / 'share_assets/开始使用.md',
-                sdk_runtime / 'bin/codex.exe', root / 'LICENSE', root / 'SOURCE_LICENSE_STATUS.md']
+                root / 'LICENSE', root / 'SOURCE_LICENSE_STATUS.md']
+    if sdk_runtime is not None:
+        sdk_runtime = Path(sdk_runtime)
+        required.append(sdk_runtime / 'bin/codex.exe')
     required += [root / 'docs/public' / name
                  for name in ('README.md', 'RELEASE.md', 'ECOSYSTEM.md', 'SECURITY.md')]
     if any(not path.is_file() for path in required):
@@ -98,9 +101,13 @@ def build_command(root: Path, build_dir: Path, dist_dir: Path, sdk_runtime: Path
                '--noconsole', '--name', 'AgentBus', '--paths', str(root),
                '--distpath', str(dist_dir.resolve()), '--workpath', str(build_dir.resolve() / 'work'),
                '--specpath', str(build_dir.resolve() / 'spec'),
-               '--collect-all', 'openai_codex', '--hidden-import', 'codex_cli_bin',
-               '--hidden-import', 'tools.export_source',
-               '--copy-metadata', 'openai-codex', '--copy-metadata', 'openai-codex-cli-bin']
+               '--collect-all', 'openai_codex', '--hidden-import', 'tools.export_source',
+               '--copy-metadata', 'openai-codex']
+    if sdk_runtime is None:
+        command += ['--exclude-module', 'codex_cli_bin']
+    else:
+        command += ['--hidden-import', 'codex_cli_bin', '--copy-metadata', 'openai-codex-cli-bin',
+                    '--add-data', str(sdk_runtime) + ';codex_cli_bin']
     if web_desktop:
         command += ['--icon', str(root / APP_ICON_FILE)]
         for module in ('webview', 'pythonnet', 'clr_loader'):
@@ -119,7 +126,6 @@ def build_command(root: Path, build_dir: Path, dist_dir: Path, sdk_runtime: Path
     for source, destination in [(root / 'schemas', 'schemas'),
                                 (root / 'skills/agentbus-team', 'skills/agentbus-team'),
                                 (root / 'share_assets', 'share_assets'),
-                                (sdk_runtime, 'codex_cli_bin'),
                                 (root / 'agentbus/trigger/manifests', 'agentbus/trigger/manifests'),
                                 (root / 'agentbus/host_assets', 'agentbus/host_assets')]:
         command += ['--add-data', str(source) + ';' + destination]
@@ -150,6 +156,8 @@ def main(argv=None) -> int:
                         help='Timeout for tools/check_offline.py in seconds (default 1200s)')
     parser.add_argument('--skip-tests', action='store_true',
                         help='Skip running full check_offline.py if already verified by caller')
+    parser.add_argument('--external-codex-runtime', action='store_true',
+                        help='Bundle the SDK only and use a separately installed Codex executable')
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args(argv)
     try:
@@ -159,10 +167,12 @@ def main(argv=None) -> int:
         root = validate_source_root(args.root)
         if (root / 'agentbus/web_desktop.py').is_file():
             validate_web_build_environment()
-        spec = importlib.util.find_spec('codex_cli_bin')
-        if spec is None or not spec.submodule_search_locations:
-            raise ValueError('Use a build venv with requirements-build.txt installed first.')
-        runtime = Path(next(iter(spec.submodule_search_locations)))
+        runtime = None
+        if not args.external_codex_runtime:
+            spec = importlib.util.find_spec('codex_cli_bin')
+            if spec is None or not spec.submodule_search_locations:
+                raise ValueError('Use a build venv with requirements-build.txt installed first.')
+            runtime = Path(next(iter(spec.submodule_search_locations)))
         command = build_command(root, root / args.build_dir, root / args.dist_dir, runtime)
         if args.dry_run:
             print(json.dumps({'argv': command, 'cwd': str(root), 'model_calls': 0}))

@@ -3,10 +3,12 @@
 """Persistent Codex sessions backed by the official openai-codex Python SDK."""
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import re
 import shutil
+import sys
 import threading
 import time
 from pathlib import Path
@@ -28,7 +30,15 @@ _SANDBOX_NAMES = {
 def _resolve_sdk_codex_bin(configured: Path | None) -> Path | None:
     """Recover a removed desktop-managed binary without replacing custom paths."""
     # Source: Codex internal regression review, 2026-10-04. No private config reads.
-    if configured is None or configured.is_file():
+    if configured is None:
+        if not getattr(sys, 'frozen', False) or importlib.util.find_spec('codex_cli_bin') is not None:
+            return None
+        from .adapters import resolve_codex
+        installed = resolve_codex()
+        if installed and installed.is_file() and (os.name != 'nt' or installed.suffix.lower() == '.exe'):
+            return installed
+        raise AdapterError('请安装官方 Codex CLI，并在团队接入中选择 codex.exe。')
+    if configured.is_file():
         return configured
     local = os.environ.get("LOCALAPPDATA")
     if local:

@@ -20,7 +20,7 @@ AgentBus 是一个本地优先的多 Agent 协作工作台。任务、进度、�
 
 文件协作是通用入口。成员在自己的聊天中接手。需要自动发起新回合时，须另行验证该成员支持的 CLI、ACP 或 SDK 接入。
 
-**当前 GitHub Release 提供源码。** 使用下方步骤可先试用文件工作流。Windows 便携版发布后，可从 Releases 下载，更新提醒在桌面端 **帮助 → 检查更新…**。
+**Windows 10/11 x64** 从 [Releases](https://github.com/wuerchenai-cell/AgentBus/releases/latest) 下载 `AgentBus-win-x64-green.zip`，解压后打开 `AgentBus.exe`。桌面端需要 Microsoft WebView2。使用 Codex SDK 接入时，请使用单独安装的官方 Codex CLI。支持更新检查的桌面版默认在打开时检查，发现新版后点击「前往下载」即可打开 GitHub 发布页。可在 **帮助 → 检查更新…** 手动检查或关闭自动检查。
 
 ## 从源码体验任务树
 

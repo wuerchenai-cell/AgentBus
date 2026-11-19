@@ -104,21 +104,26 @@ class ReleaseUpdateTests(unittest.TestCase):
             result = release_updates.check_for_update('agentbus-lab/AgentBus', '1.2.0')
         self.assertEqual(result['status'], 'unavailable')
 
-    def test_opt_in_and_daily_limit_survive_new_bridge_instances(self):
+    def test_startup_checks_by_default_and_reopening_checks_again(self):
         with patch.object(release_updates, 'GITHUB_RELEASE_REPOSITORY', 'agentbus-lab/AgentBus'), \
              patch.object(release_updates, '_fetch_releases', return_value=[release()]) as fetch:
             first = WebBridge(self.root)
-            self.assertEqual(first.call('check_release', {'automatic': True})['data']['status'], 'disabled')
-            self.assertFalse(self.state.exists())
-            self.assertTrue(first.call('set_release_preferences', {'automatic': True})['ok'])
+            self.assertTrue(first.call('release_preferences', {})['data']['automatic'])
             self.assertEqual(first.call('check_release', {'automatic': True})['data']['status'],
                              'update_available')
-            self.assertEqual(WebBridge(self.root).call('check_release', {'automatic': True})['data']['status'],
+            self.assertEqual(first.call('check_release', {'automatic': True})['data']['status'],
                              'deferred')
-            self.assertEqual(fetch.call_count, 1)
-            self.assertEqual(first.call('check_release', {'automatic': False})['data']['status'],
+            second = WebBridge(self.root)
+            self.assertEqual(second.call('check_release', {'automatic': True})['data']['status'],
                              'update_available')
             self.assertEqual(fetch.call_count, 2)
+            self.assertTrue(second.call('set_release_preferences', {'automatic': False})['ok'])
+            third = WebBridge(self.root)
+            self.assertEqual(third.call('check_release', {'automatic': True})['data']['status'],
+                             'disabled')
+            self.assertEqual(third.call('check_release', {'automatic': False})['data']['status'],
+                             'update_available')
+            self.assertEqual(fetch.call_count, 3)
 
     def test_only_verified_release_page_is_opened_on_request(self):
         with patch.object(release_updates, 'GITHUB_RELEASE_REPOSITORY', 'agentbus-lab/AgentBus'), \

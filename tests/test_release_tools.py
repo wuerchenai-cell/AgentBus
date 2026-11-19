@@ -71,6 +71,19 @@ class PortableReleaseTests(unittest.TestCase):
             for name in ('README.md','RELEASE.md','ECOSYSTEM.md','SECURITY.md'):
                 self.assertIn(str(root/'docs/public'/name)+';docs/public',argv)
 
+    def test_public_build_keeps_sdk_but_excludes_its_native_runtime(self):
+        api = self.builder()
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.fixture(root)
+            (root / 'runtime/bin/codex.exe').unlink()
+            command = api.build_command(root, root / 'build', root / 'dist', None)
+        self.assertIn('openai_codex', command)
+        self.assertIn('openai-codex', command)
+        self.assertNotIn('openai-codex-cli-bin', command)
+        self.assertIn(('--exclude-module', 'codex_cli_bin'), tuple(zip(command, command[1:])))
+        self.assertFalse(any(entry.endswith(';codex_cli_bin') for entry in command))
+
     def test_web_desktop_build_embeds_explorer_and_window_icons(self):
         api = self.builder()
         with tempfile.TemporaryDirectory(prefix='release icon ') as directory:
