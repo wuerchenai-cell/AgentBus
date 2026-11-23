@@ -434,7 +434,7 @@ class AgentBusMcp:
             f"时间预算: {m.budget_s}s",
             "",
             "【正文】",
-            m.body,
+            m.work_brief,
             "",
             "【干完之后】调用 agentbus_report：",
             f'  agent="{agent}", msg_id="{m.id}", result="<做了什么 / 产物路径 / 未验证的部分>"',

@@ -22,7 +22,7 @@ from .detect import detect_all, render as render_detect, summary as detect_summa
 from .director import Director, Summary, HUMAN_INBOX, DIRECTOR_INBOX
 from .lease import Lease, LeaseError, LeaseManager
 
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 __all__ = [
     "Bus", "Message", "BusError", "WinDirWatcher", "new_id", "now_iso",
     "Config", "ConfigError", "load_config", "save_config", "describe",

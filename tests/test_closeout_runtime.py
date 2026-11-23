@@ -258,8 +258,10 @@ class RuntimeCloseoutTests(unittest.TestCase):
         marker = self.root / "premature-process.txt"
         self.cfg.data["workers"]["codex"]["command"] = [sys.executable, "-c",
             f"from pathlib import Path; Path({str(marker)!r}).write_text('premature')"]
+        roots = []
         class RefusedJob:
-            def attach_and_resume(self, _proc):
+            def attach_and_resume(self, proc):
+                roots.append(proc)
                 time.sleep(.3)
                 raise PermissionError("synthetic job assignment refusal")
             def close(self):
@@ -267,6 +269,8 @@ class RuntimeCloseoutTests(unittest.TestCase):
         with patch.object(self.engine, "_windows_job", return_value=RefusedJob()):
             result = self.engine.spawn_leaf(self.leaf(), "codex")
         self.assertFalse(result.success)
+        self.assertFalse(result.started)
+        self.assertIsNotNone(roots[0].poll(), "Suspended process must be reaped before returning")
         self.assertFalse(marker.exists(), "Process ran before supervision was established")
 
     def test_zero_worker_time_budget_does_not_invoke_handler(self):

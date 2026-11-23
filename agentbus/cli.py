@@ -377,6 +377,8 @@ def cmd_init(args) -> int:
         if not path.exists():
             path.write_text(template, encoding="utf-8")
 
+    if getattr(sys, 'frozen', False) and not (cfg.workspace / '.agentbus/workflow.json').exists():
+        prepare_project_workflow(cfg)
     print(f"[ok] 工作区已初始化: {ws}")
     print(f"     配置: {cfg.path}")
     print(f"     约定: {agents_md}")
@@ -719,6 +721,218 @@ def cmd_evidence(args) -> int:
     return 0
 
 
+def _check_delivery_destinations(cfg, verified, export, summary):
+    """Validate the whole set before creating either the report or the archive."""
+    from .public_files import _check_ancestors
+    def destination(value):
+        if not value:
+            return None
+        path = cfg.workspace / Path(value)
+        if any(part.casefold() == '.agentbus' for part in path.parts):
+            raise ValueError('导出位置不能在项目控制目录中')
+        _check_ancestors(path)
+        return path.resolve()
+    archive, report = destination(export), destination(summary)
+    folder = archive is not None and archive.suffix.lower() != '.zip'
+    if folder and archive.exists() and (not archive.is_dir() or any(archive.iterdir())):
+        raise ValueError('导出请选择空目录或新目录，避免混入旧文件。')
+    targets = ([archive / name for name in verified] if folder else [archive]) if archive else []
+    if report:
+        targets.append(report)
+    names = {cfg.output_root.resolve() / name for name in verified}
+    identities = set()
+    for name in names:
+        stat = name.stat()
+        identities.add((stat.st_dev, stat.st_ino))
+    if folder and report and (report == archive or report in archive.parents):
+        raise ValueError(f'报告路径与导出目录冲突：{report}')
+    for target in targets:
+        if target in names or any(parent in names for parent in target.parents):
+            raise ValueError(f'导出路径与原件或另一项输出冲突：{target}')
+        if target.exists():
+            info = target.stat()
+            identity = (info.st_dev, info.st_ino)
+            if not target.is_file() or identity in identities or info.st_nlink > 1:
+                raise ValueError(f'导出目标不是独立的普通文件，已保留原件：{target}')
+            identities.add(identity)
+        if any(parent.exists() and not parent.is_dir() for parent in target.parents):
+            raise ValueError(f'导出目录与已有文件冲突：{target}')
+        names.add(target)
+    if report and any(report in target.parents for target in targets if target != report):
+        raise ValueError(f'报告路径与导出文件冲突：{report}')
+
+
+def export_verified_delivery(cfg, forest, *, export_target=None, summary_target=None, allow_partial=False, emit=print):
+    snapshot = forest.snapshot()
+    leaves = snapshot.get('leaves', [])
+    total_leaves = len(leaves)
+    delivered_leaves = [l for l in leaves if l.get('state') == 'delivered']
+    delivered_count = len(delivered_leaves)
+    completion_pct = (delivered_count / total_leaves * 100.0) if total_leaves > 0 else 0.0
+    out_root = cfg.output_root
+    total_files = 0
+    total_bytes = 0
+    issues = []
+    verified_outputs = {}
+    from .workspace_files import WorkspaceFiles, MAX_ARTIFACT_BYTES
+    output_files = WorkspaceFiles(out_root)
+    def export_bytes(rel):
+        _, path, observed = output_files._path(rel)
+        raw = output_files._raw(path, MAX_ARTIFACT_BYTES, snapshot=observed)
+        if hashlib.sha256(raw).hexdigest() != verified_outputs[rel]:
+            raise ValueError(f'产物在核验后发生变化，停止导出：{rel}')
+        return raw
+    emit(f"=== 产品交付产物与输出完整性核验 (产出根目录: {out_root}) ===")
+    emit(f"[进度] 全项目正式交付: {delivered_count}/{total_leaves} 项 ({completion_pct:.1f}%)")
+    if delivered_count < total_leaves:
+        unreached = [l for l in leaves if l.get('state') != 'delivered']
+        unreached_desc = ', '.join(f"§{l.get('section_no', l['id'])}={l.get('state')}" for l in unreached[:5])
+        if len(unreached) > 5:
+            unreached_desc += "..."
+        emit(f"       待终态任务数：{len(unreached)} 个 (状态分布: {unreached_desc})")
+    unresolved_evidence = {
+        'admin_passed': '仅有管理员放行，缺少正式验收。',
+        'awaiting_audit': '等待独立审核。',
+        'rejected': '独立审核未通过。',
+    }
+    for leaf in leaves:
+        reason = unresolved_evidence.get(leaf.get('state'))
+        if reason:
+            sec = leaf.get('section_no') or leaf['id']
+            issues.append(f"[未验证] §{sec}「{leaf['title']}」{reason}")
+    for leaf in delivered_leaves:
+        title = leaf.get('title')
+        sec = leaf.get('section_no') or leaf.get('id')
+        arts = leaf.get('artifacts', [])
+        if leaf.get('evidence_error') or leaf.get('receipt_state') != 'valid':
+            issues.append(f"[未验证] §{sec}「{title}」：{leaf.get('evidence_error') or '回执尚未核验'}")
+            continue
+        replacements = {r['path']: r for r in leaf.get('artifact_replacements', [])}
+        expected_set = set(leaf.get('expected_artifacts', []) or [])
+        recorded_paths = {a.get('path') for a in arts if isinstance(a, dict)}
+        missing_expected = expected_set - recorded_paths
+        for exp in sorted(missing_expected):
+            issues.append(f"[缺失回执] §{sec}「{title}」期望产物未包含在回执清单中：{exp}")
+
+        if not arts:
+            continue
+        for art in arts:
+            rel_path = art.get('path', '')
+            expected_sha = replacements.get(rel_path, {}).get('current_sha256', art.get('sha256', ''))
+            try:
+                _, file_path, observed = output_files._path(rel_path)
+                blob = output_files._raw(file_path, MAX_ARTIFACT_BYTES, snapshot=observed)
+            except (OSError, ValueError) as exc:
+                issues.append(f"[缺失或越界] §{sec}「{title}」：{rel_path} ({type(exc).__name__})")
+                continue
+            actual_bytes = len(blob)
+            actual_sha = hashlib.sha256(blob).hexdigest()
+            if actual_sha.lower() != expected_sha.lower():
+                issues.append(f"[漂移] §{sec}「{title}」产物哈希不一致：{rel_path} (期望 {expected_sha[:8]}, 实际 {actual_sha[:8]})")
+            else:
+                if rel_path not in verified_outputs:
+                    total_files += 1
+                    total_bytes += actual_bytes
+                verified_outputs[rel_path] = actual_sha
+                emit(f"  [有效] §{sec}「{title}」-> {rel_path} ({actual_bytes} 字节, sha256 匹配)")
+    emit("-" * 60)
+    if issues:
+        emit(f"[警告] 核验完成：发现 {len(issues)} 处产物异常：")
+        for iss in issues:
+            emit(f"    {iss}")
+        return 1
+    _check_delivery_destinations(cfg, verified_outputs, export_target, summary_target)
+    partial = delivered_count < total_leaves
+    if partial and (not total_files or not allow_partial):
+        emit('[未完成] 全项目尚未交付，未生成归档或交付报告。'
+              '已有核验文件时，可用 --allow-partial 只导出已交付部分。')
+        return 1
+    if not total_files:
+        status = '没有文件产物，文件核验不适用。'
+        report_title = '任务交付记录'
+        emit(f'[不适用] {status}')
+        if export_target:
+            emit('未生成空归档。')
+            return 1
+    elif partial:
+        status = f'部分交付：{delivered_count}/{total_leaves} 项正式交付，已核验 {total_files} 个文件。'
+        report_title = '部分交付与产物清单'
+        emit(f'[部分] {status}')
+    else:
+        status = f'完整交付：{delivered_count}/{total_leaves} 项正式交付，{total_files} 个文件摘要一致。'
+        report_title = '产品全景交付白皮书与产物清单'
+        emit(f'[通过] {status}')
+
+    if export_target:
+        target_p = Path(export_target)
+        if not target_p.is_absolute():
+            target_p = cfg.workspace / target_p
+        target_p.parent.mkdir(parents=True, exist_ok=True)
+        if target_p.suffix.lower() == '.zip':
+            import tempfile
+            import zipfile
+            with tempfile.NamedTemporaryFile(dir=target_p.parent, prefix='.agentbus-export-',
+                                             delete=False) as handle:
+                staging = Path(handle.name)
+            try:
+                with zipfile.ZipFile(staging, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+                    for rel in verified_outputs:
+                        zf.writestr(rel, export_bytes(rel))
+                os.replace(staging, target_p)
+            finally:
+                staging.unlink(missing_ok=True)
+        else:
+            if target_p.is_dir() and any(target_p.iterdir()):
+                raise ValueError('导出请选择空目录或新目录，避免混入旧文件。')
+            target_p.mkdir(parents=True, exist_ok=True)
+            for rel in verified_outputs:
+                dest = target_p / rel
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_bytes(export_bytes(rel))
+        emit(f"  [导出] {'部分交付' if partial else '完整交付'}，{total_files} 个文件：{target_p}")
+
+    if summary_target:
+        sum_p = Path(summary_target)
+        if not sum_p.is_absolute():
+            sum_p = cfg.workspace / sum_p
+        sum_p.parent.mkdir(parents=True, exist_ok=True)
+        report_lines = [
+            f"# {report_title}",
+            "",
+            f"- 生成时间：{time.strftime('%Y-%m-%d %H:%M:%S')}",
+            f"- 正式交付节点：{delivered_count}/{total_leaves} 项",
+            f"- 核验文件：{total_files} 个，共 {total_bytes} 字节",
+            f"- 状态：{status}",
+        ]
+        if total_files:
+            report_lines.extend([
+                "- 合法历史摘要仅用于追溯，不代表当前版本摘要。",
+                "",
+                "## 交付产物明细清单",
+                "",
+                "| 章节 | 任务标题 | 产物相对路径 | 记录字节数 | 记录 SHA256 摘要 | 版本说明 |",
+                "|---|---|---|---|---|---|",
+            ])
+        if not total_files:
+            for leaf in delivered_leaves:
+                report_lines.extend(["", f"## §{leaf.get('section_no') or leaf['id']} {leaf['title']}",
+                                     str(leaf.get('results') or '仅有任务完成记录。')])
+        for leaf in delivered_leaves:
+            sec = leaf.get('section_no') or leaf.get('id')
+            title = leaf.get('title')
+            for art in leaf.get('artifacts', []):
+                rel = art.get('path', '')
+                size = art.get('bytes', 0)
+                digest = art.get('sha256', '')
+                historical = any(item.get('path') == rel for item in leaf.get('artifact_replacements', []))
+                version = '历史版本（已被合法后继替代）' if historical else '当前版本'
+                report_lines.append(f"| §{sec} | {title} | `{rel}` | {size} | `{digest}` | {version} |")
+        from .skill_install import _atomic_write
+        _atomic_write(sum_p, ('\n'.join(report_lines) + '\n').encode('utf-8'))
+        emit(f"  [报告] 已生成交付记录：{sum_p}")
+    return 0
+
+
 def cmd_tree(args) -> int:
     """Public task forest actions; all execution state remains in the file bus."""
     from .task_tree import TaskForest
@@ -883,170 +1097,8 @@ def cmd_tree(args) -> int:
         else:
             raise ValueError('tree add/append 需要 --file 文件或 --title 任务标题以动态追加任务')
     elif args.action in ('artifacts', 'verify'):
-        snapshot = forest.snapshot()
-        leaves = snapshot.get('leaves', [])
-        total_leaves = len(leaves)
-        delivered_leaves = [l for l in leaves if l.get('state') == 'delivered']
-        delivered_count = len(delivered_leaves)
-        completion_pct = (delivered_count / total_leaves * 100.0) if total_leaves > 0 else 0.0
-        out_root = cfg.output_root
-        total_files = 0
-        total_bytes = 0
-        issues = []
-        verified_outputs = {}
-        from .workspace_files import WorkspaceFiles, MAX_ARTIFACT_BYTES
-        output_files = WorkspaceFiles(out_root)
-        def export_bytes(rel):
-            _, path, observed = output_files._path(rel)
-            raw = output_files._raw(path, MAX_ARTIFACT_BYTES, snapshot=observed)
-            if hashlib.sha256(raw).hexdigest() != verified_outputs[rel]:
-                raise ValueError(f'产物在核验后发生变化，停止导出：{rel}')
-            return raw
-        print(f"=== 产品交付产物与输出完整性核验 (产出根目录: {out_root}) ===")
-        print(f"[进度] 全项目正式交付: {delivered_count}/{total_leaves} 项 ({completion_pct:.1f}%)")
-        if delivered_count < total_leaves:
-            unreached = [l for l in leaves if l.get('state') != 'delivered']
-            unreached_desc = ', '.join(f"§{l.get('section_no', l['id'])}={l.get('state')}" for l in unreached[:5])
-            if len(unreached) > 5:
-                unreached_desc += "..."
-            print(f"       待终态任务数：{len(unreached)} 个 (状态分布: {unreached_desc})")
-        unresolved_evidence = {
-            'admin_passed': '仅有管理员放行，缺少正式验收。',
-            'awaiting_audit': '等待独立审核。',
-            'rejected': '独立审核未通过。',
-        }
-        for leaf in leaves:
-            reason = unresolved_evidence.get(leaf.get('state'))
-            if reason:
-                sec = leaf.get('section_no') or leaf['id']
-                issues.append(f"[未验证] §{sec}「{leaf['title']}」{reason}")
-        for leaf in delivered_leaves:
-            title = leaf.get('title')
-            sec = leaf.get('section_no') or leaf.get('id')
-            arts = leaf.get('artifacts', [])
-            if leaf.get('evidence_error') or leaf.get('receipt_state') != 'valid':
-                issues.append(f"[未验证] §{sec}「{title}」：{leaf.get('evidence_error') or '回执尚未核验'}")
-                continue
-            replacements = {r['path']: r for r in leaf.get('artifact_replacements', [])}
-            expected_set = set(leaf.get('expected_artifacts', []) or [])
-            recorded_paths = {a.get('path') for a in arts if isinstance(a, dict)}
-            missing_expected = expected_set - recorded_paths
-            for exp in sorted(missing_expected):
-                issues.append(f"[缺失回执] §{sec}「{title}」期望产物未包含在回执清单中：{exp}")
-
-            if not arts:
-                continue
-            for art in arts:
-                rel_path = art.get('path', '')
-                expected_sha = replacements.get(rel_path, {}).get('current_sha256', art.get('sha256', ''))
-                try:
-                    _, file_path, observed = output_files._path(rel_path)
-                    blob = output_files._raw(file_path, MAX_ARTIFACT_BYTES, snapshot=observed)
-                except (OSError, ValueError) as exc:
-                    issues.append(f"[缺失或越界] §{sec}「{title}」：{rel_path} ({type(exc).__name__})")
-                    continue
-                actual_bytes = len(blob)
-                actual_sha = hashlib.sha256(blob).hexdigest()
-                if actual_sha.lower() != expected_sha.lower():
-                    issues.append(f"[漂移] §{sec}「{title}」产物哈希不一致：{rel_path} (期望 {expected_sha[:8]}, 实际 {actual_sha[:8]})")
-                else:
-                    if rel_path not in verified_outputs:
-                        total_files += 1
-                        total_bytes += actual_bytes
-                    verified_outputs[rel_path] = actual_sha
-                    print(f"  [有效] §{sec}「{title}」-> {rel_path} ({actual_bytes} 字节, sha256 匹配)")
-        print("-" * 60)
-        if issues:
-            print(f"[警告] 核验完成：发现 {len(issues)} 处产物异常：")
-            for iss in issues:
-                print(f"    {iss}")
-            return 1
-        partial = delivered_count < total_leaves
-        export_target = getattr(args, 'export', None)
-        if partial and (not total_files or not getattr(args, 'allow_partial', False)):
-            print('[未完成] 全项目尚未交付，未生成归档或交付报告。'
-                  '已有核验文件时，可用 --allow-partial 只导出已交付部分。')
-            return 1
-        if not total_files:
-            status = '没有文件产物，文件核验不适用。'
-            report_title = '任务交付记录'
-            print(f'[不适用] {status}')
-            if export_target:
-                print('未生成空归档。')
-                return 1
-        elif partial:
-            status = f'部分交付：{delivered_count}/{total_leaves} 项正式交付，已核验 {total_files} 个文件。'
-            report_title = '部分交付与产物清单'
-            print(f'[部分] {status}')
-        else:
-            status = f'完整交付：{delivered_count}/{total_leaves} 项正式交付，{total_files} 个文件摘要一致。'
-            report_title = '产品全景交付白皮书与产物清单'
-            print(f'[通过] {status}')
-
-        if export_target:
-            target_p = Path(export_target)
-            if not target_p.is_absolute():
-                target_p = cfg.workspace / target_p
-            target_p.parent.mkdir(parents=True, exist_ok=True)
-            if target_p.suffix.lower() == '.zip':
-                import tempfile
-                import zipfile
-                with tempfile.NamedTemporaryFile(dir=target_p.parent, prefix='.agentbus-export-',
-                                                 delete=False) as handle:
-                    staging = Path(handle.name)
-                try:
-                    with zipfile.ZipFile(staging, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
-                        for rel in verified_outputs:
-                            zf.writestr(rel, export_bytes(rel))
-                    os.replace(staging, target_p)
-                finally:
-                    staging.unlink(missing_ok=True)
-            else:
-                if target_p.is_dir() and any(target_p.iterdir()):
-                    raise ValueError('导出请选择空目录或新目录，避免混入旧文件。')
-                target_p.mkdir(parents=True, exist_ok=True)
-                for rel in verified_outputs:
-                    dest = target_p / rel
-                    dest.parent.mkdir(parents=True, exist_ok=True)
-                    dest.write_bytes(export_bytes(rel))
-            print(f"  [导出] {'部分交付' if partial else '完整交付'}，{total_files} 个文件：{target_p}")
-
-        summary_target = getattr(args, 'summary_file', None)
-        if summary_target:
-            sum_p = Path(summary_target)
-            if not sum_p.is_absolute():
-                sum_p = cfg.workspace / sum_p
-            sum_p.parent.mkdir(parents=True, exist_ok=True)
-            report_lines = [
-                f"# {report_title}",
-                "",
-                f"- 生成时间：{time.strftime('%Y-%m-%d %H:%M:%S')}",
-                f"- 正式交付节点：{delivered_count}/{total_leaves} 项",
-                f"- 核验文件：{total_files} 个，共 {total_bytes} 字节",
-                f"- 状态：{status}",
-            ]
-            if total_files:
-                report_lines.extend([
-                    "- 合法历史摘要仅用于追溯，不代表当前版本摘要。",
-                    "",
-                    "## 交付产物明细清单",
-                    "",
-                    "| 章节 | 任务标题 | 产物相对路径 | 记录字节数 | 记录 SHA256 摘要 | 版本说明 |",
-                    "|---|---|---|---|---|---|",
-                ])
-            for leaf in delivered_leaves:
-                sec = leaf.get('section_no') or leaf.get('id')
-                title = leaf.get('title')
-                for art in leaf.get('artifacts', []):
-                    rel = art.get('path', '')
-                    size = art.get('bytes', 0)
-                    digest = art.get('sha256', '')
-                    historical = any(item.get('path') == rel for item in leaf.get('artifact_replacements', []))
-                    version = '历史版本（已被合法后继替代）' if historical else '当前版本'
-                    report_lines.append(f"| §{sec} | {title} | `{rel}` | {size} | `{digest}` | {version} |")
-            sum_p.write_text('\n'.join(report_lines) + '\n', encoding='utf-8')
-            print(f"  [报告] 已生成交付记录：{sum_p}")
-        return 0
+        return export_verified_delivery(cfg, forest, export_target=getattr(args, 'export', None),
+            summary_target=getattr(args, 'summary_file', None), allow_partial=getattr(args, 'allow_partial', False))
 
     elif args.action == 'worker-loop':
         from .worker_loop import WorkerLoop
@@ -1418,7 +1470,7 @@ def cmd_claim_next(args) -> int:
         print(f"    业务产出：{cfg.output_root}")
         if wt_info and wt_info.get("worktree_path"):
             print(f"    隔离沙箱：{wt_info['worktree_path']} ({wt_info.get('note', '')})")
-        print(f"    任务目标：{claimed.body}")
+        print(f"    任务目标：{claimed.work_brief}")
         if claimed.expected_artifacts:
             print(f"    预期产物：{json.dumps(claimed.expected_artifacts, ensure_ascii=False)}")
         print(f"    票据凭证：{json.dumps(ticket, ensure_ascii=False)}")
@@ -1485,6 +1537,8 @@ def cmd_claim(args) -> int:
     print(f"[ok] 已认领 {claimed.id} [{claimed.type}] -> processing/ "
           f"(agent={agent}, status={claimed.status})")
     print(f"    {claimed.title}")
+    if claimed.handoff_note or claimed.handoff_reason:
+        print(claimed.work_brief)
     if wt_info and wt_info.get("worktree_path"):
         print(f"    隔离沙箱：{wt_info['worktree_path']}")
     if draft_rel:
@@ -1573,8 +1627,8 @@ def cmd_escalations(args) -> int:
     print(f"[!] 有 {len(esc)} 条需要你决定：")
     for message in esc:
         print(f"  · [{message.id}] {message.title}")
-        if message.body:
-            print("    " + message.body.replace("\n", "\n    "))
+        if message.work_brief:
+            print("    " + message.work_brief.replace("\n", "\n    "))
     return 0
 
 
@@ -1810,7 +1864,7 @@ def cmd_handoff(args) -> int:
 
 【任务】{m.title}
 
-{m.body}
+{m.work_brief}
 
 【完成后请输出】一段结论：做了什么、产物在哪（给出文件路径）、有没有没验证的部分。
 
@@ -3800,8 +3854,8 @@ def build_parser() -> argparse.ArgumentParser:
     add_ws(p)
     p.add_argument('--agent', required=True, help='执行该任务的智能体 ID')
     p.add_argument('--id', help='任务消息 id；若省略则自动推断当前工位唯一的在途任务')
-    p.add_argument('--claim-epoch', type=int, help='认领代次；若省略则从在途任务自动提取')
-    p.add_argument('--claim-id', help='认领票据；若省略则从在途任务自动提取')
+    p.add_argument('--claim-epoch', type=int, help='本次认领时返回的原代次，续约时必填')
+    p.add_argument('--claim-id', help='本次认领时返回的原票据，续约时必填')
     p.add_argument('--note', default='', help='心跳附言或执行进度说明')
     p.set_defaults(func=cmd_heartbeat)
 
@@ -4282,6 +4336,9 @@ def main(argv: list[str] | None = None) -> int:
         elif "ticket" in lowered or "claim" in lowered or "票据" in msg:
             print("    [下一步建议] 认领票据不匹配或已失效：先用 'agentbus inbox --mine --caller <你的ID>' 确认任务是否仍在你名下；"
                   "确属失效再重新 claim。", file=sys.stderr)
+        elif "not_found" in lowered and "artifact" in lowered:
+            folder = _load(args).output_root
+            print(f"    [下一步建议] 请把回执列出的文件保存到业务产出目录 {folder} 下，再提交。", file=sys.stderr)
         elif "不存在" in msg and ("产物" in msg or "artifact" in lowered):
             print("    [下一步建议] 声明的产物文件还不存在：先把产物写到任务声明的路径（相对业务产出目录），或用 --artifacts 指定实际路径。", file=sys.stderr)
         elif "artifact" in lowered or "manifest" in lowered or "产物" in msg:

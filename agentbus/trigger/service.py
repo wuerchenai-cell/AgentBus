@@ -431,6 +431,7 @@ class TriggerDeliveryService:
                 pending = target == "uncertain" or sub.status in ("queued", "notified") or active
                 self.set_member_busy(member, pending, reason=("submission_uncertain" if target == "uncertain" else "delivery_pending"))
             return {"status":"ok", "request_id":req.request_id, "submit_status":sub.status,
+                    "notified_task_id":next(iter(req.source_message_ids), None),
                     "accepted_by_host":sub.accepted_by_host}
         except Exception as exc:
             with task_lock(self.workspace / ".agentbus", "trigger-member", member):

@@ -143,10 +143,13 @@ class HeadlessSpawnEngine:
 
     def _stop_process(self, info):
         proc = info.get("proc")
-        self._kill_process_tree(info.get("pid"))
         job = info.pop("job", None)
         if job:
+            # Closing the kill-on-close job reaps its descendants. An unassigned
+            # Windows root is still suspended; terminate that exact handle below.
             job.close()
+        else:
+            self._kill_process_tree(info.get("pid"))
         if proc and proc.poll() is None:
             proc.kill()
         if proc:
@@ -355,6 +358,7 @@ class HeadlessSpawnEngine:
 
         proc = None
         job = None
+        started = False
         try:
             if stop_file.exists():
                 raise BusError("STOP_REQUESTED: stopped before Popen")
@@ -380,6 +384,7 @@ class HeadlessSpawnEngine:
                 active_info.update(pid=proc.pid, proc=proc, job=job)
                 if job:
                     job.attach_and_resume(proc)
+                started = True
 
             pid = proc.pid
             active_info.update(start_time=start_time, start_monotonic=time.monotonic(),
@@ -413,7 +418,7 @@ class HeadlessSpawnEngine:
                 leaf_id=leaf_id,
                 task_id=task_id,
                 cmd=cmd,
-                started=proc is not None,
+                started=started,
                 success=False,
                 error=str(exc),
             )

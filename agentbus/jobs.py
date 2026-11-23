@@ -185,6 +185,8 @@ def _publish(bus: Bus, data: dict[str, Any]) -> None:
 def _same_intent(message: Message, data: dict[str, Any]) -> bool:
     required = ('id', 'sender', 'to', 'type', 'body', 'title', 'reply_to', 'result_to')
     optional = ('job_id', 'plan_id', 'plan_sha256', 'expected_artifacts', 'refs')
+    if any(getattr(message, key) != data.get(key, '') for key in ('handoff_note', 'handoff_reason')):
+        return False
     return all(getattr(message, key) == data.get(key) for key in required) and all(
         getattr(message, key) == data[key] for key in optional if key in data)
 
@@ -199,6 +201,9 @@ def _routing_intent_sha256(data: dict[str, Any]) -> str:
             'job_id', 'plan_id', 'plan_sha256', 'expected_artifacts',
             'deadline_ts', 'budget_s', 'attempt', 'hop')
     value = {key: data.get(key) for key in keys}
+    for key in ('handoff_note', 'handoff_reason'):
+        if data.get(key):
+            value[key] = data[key]
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True,
                                      separators=(',', ':')).encode('utf-8')).hexdigest()
 

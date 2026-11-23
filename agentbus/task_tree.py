@@ -1110,8 +1110,13 @@ class TaskForest:
                 next_attempt = 0
             from .artifact_versions import predecessor_refs
             dependency_refs = predecessor_refs(self.cfg, self.bus, tree, leaf)
+            history = leaf.get("handoff_history", [])
+            reason = history[-1]["reason"] if previous and history else ""
+            checkpoint = leaf.get("handoff", "") if previous else ""
             message = self.bus.make(self.cfg.director, agent, "task", title=leaf["title"],
                                     body=previous.body if previous else leaf["goal"] or leaf["title"],
+                                    handoff_note=checkpoint if checkpoint != reason else "",
+                                    handoff_reason=reason,
                                     result_to=previous.result_to if previous else leaf.get("result_to") or job["coordinator"],
                                     reply_to=previous.id if previous else job["goal_id"],
                                     deadline_ts=deadline,
@@ -1144,7 +1149,7 @@ class TaskForest:
                    for event in self.bus.events()):
             self.bus.audit(event="task_tree_successor_bound", leaf_id=leaf["id"], job_id=message.job_id,
                            old_task_id=old_id, task_id=message.id, successor=message.to,
-                           source="task_forest", reason=leaf["handoff"])
+                           source="task_forest", reason=(leaf["handoff_history"][-1]["reason"] if leaf.get("handoff_history") else leaf["handoff"]))
 
     def claim_leaf(self, leaf_id, agent):
         with task_lock(self.root, "task-forest", "structure"):
@@ -1786,7 +1791,7 @@ class TaskForest:
                 "reason": reason.strip(),
                 "owner_confirmed_inactive": owner_confirmed_inactive is True,
             })
-            leaf["handoff"] = reason.strip()
+            leaf["handoff"] = leaf.get("handoff") or reason.strip()
             # An explicit successor becomes a routed task; otherwise leave this
             # project leaf open for whichever eligible member claims it next.
             leaf.pop("task_id", None)
@@ -1841,6 +1846,7 @@ class TaskForest:
         ])
         if history:
             last = history[-1]
+            prompt_lines.append(f"- **换人原因**：{last['reason']}")
             prompt_lines.append(f"- **上一任执行者**：`{last.get('agent', '未知')}`（移交时间: {last.get('timestamp', '未知')}）")
         
         prompt_lines.extend([
@@ -1951,7 +1957,7 @@ class TaskForest:
                         "reason": takeover_reason,
                         "owner_confirmed_inactive": True,
                     })
-                    leaf["handoff"] = reason
+                    leaf["handoff"] = leaf.get("handoff") or reason
                     leaf.pop("task_id", None)
                     self._write(tree)
                     

@@ -296,6 +296,7 @@
     const configured=online&&snapshot.project.configured===true,mode=assignmentMode(),select=$('assignmentMode'),button=$('autoDispatchButton');
     if(!select||!button)return;
     select.value=mode;select.disabled=!configured||assignmentSaving;
+    $('exportDeliveryButton').disabled=!configured||!snapshot.forest.leaves.length||snapshot.forest.leaves.some(leaf=>leaf.state!=='delivered');
     $('importTreeButton').disabled=!configured;$('exportTreeButton').disabled=!configured||!snapshot.forest.roots.length;
     $('exportTreeButton').title=!snapshot.forest.roots.length?'请先创建或导入任务树，再导出模板。':!configured?'请先保存项目与成员设置。':'导出结构模板，可在其他项目重新配置成员使用。';
     if($('exportBackupButton'))$('exportBackupButton').disabled=!configured||!snapshot.forest.roots.length;
@@ -335,7 +336,11 @@
     const generation=autoDispatchGeneration;autoDispatchInFlight=true;
     try{const data=await call('dispatch_ready',{});if(generation!==autoDispatchGeneration)return;if(data?.forest)setSnapshot(data);else await refresh();const summary=data?.dispatch_summary||{};
       autoDispatchDelay=Number(summary.assigned)>0?20000:Math.min(60000,autoDispatchDelay+10000);
-      if(Number(summary.assigned)>0)toast('已分配 '+summary.assigned+' 项就绪任务至成员信箱（纯文件事件，不自动调用外部模型）。');
+      if(Number(summary.assigned)>0){
+        const waiting=[...new Set((data.assignments||[]).filter(item=>['waiting','failed'].includes(item.wake_status)).map(item=>memberName(item.agent)))];
+        const hint=waiting.length?'请打开 '+waiting.join('、')+' 的对话，发送成员接入指令。':wakeHint(data.wake_status);
+        toast('已分配 '+summary.assigned+' 项任务至成员信箱。'+hint);
+      }
     }catch(error){if(generation===autoDispatchGeneration){stopAutomaticDispatch();toast('自动指派已暂停：'+error.message,true);}}
     finally{autoDispatchInFlight=false;if(generation===autoDispatchGeneration)scheduleAutomaticDispatch();updateFlowControls();}
   }
@@ -346,13 +351,14 @@
   }
   function renderProjectFlow() {
     const target=$('flowSteps');if(!target)return;target.replaceChildren();const configured=snapshot.project.configured===true,hasTree=snapshot.forest.roots.length>0;
+    const complete=snapshot.forest.leaves.length>0&&snapshot.forest.leaves.every(leaf=>leaf.state==='delivered');
     const steps=[
       {title:'组织架构与协调者',note:configured?memberName(snapshot.config.director||snapshot.project.coordinator)+' 主持编排 · 目录已绑定':'定义团队成员、协调者与双目录拓扑',done:configured,action:showSettings},
       {title:'构建任务拓扑网',note:hasTree?snapshot.forest.leaves.length+' 个契约节点就绪':'导入已确定的任务树，或从可复用模板开始',done:hasTree,action:showTreeBuilder},
       {title:'选择任务分配方式',note:assignmentMode()==='manual'?'自己选择执行成员':'由组长自动安排',done:configured,action:showAssignmentChoice},
       {title:'智能体协议接入',note:'下发基线工作流协议，建立独立信箱会话',done:false,action:showInitialization},
       {title:'启动协同流转',note:assignmentMode()==='manual'?'选定拓扑节点，定向委派责任人':'开启自适应流水线，就绪任务自动投递',done:false,action:()=>{if(assignmentMode()==='automatic')startAutomaticDispatch();else{closeDialogIfOpen();$('leafSearch').focus();toast('搜索任务序号或点击任务卡，即可定向委派执行成员。');}}},
-      {title:'过程审计与交接',note:'实时心跳监控、产物验真与安全交接',done:false,action:()=>showView('recovery')}
+      {title:complete?'导出已验收成果':'检查进度与交接',note:complete?'全部任务已交付，核对文件并保存':'查看成员进度、受阻任务与接手记录',done:complete,action:complete?exportDelivery:()=>showView('recovery')}
     ];
     steps.forEach((step,index)=>{const button=el('button','flow-step'+(step.done?' complete':''));button.type='button';button.disabled=!online||(index>0&&!configured);append(button,el('span','flow-step-number',String(index+1).padStart(2,'0')),append(el('span','flow-step-copy'),el('strong','',step.title),el('small','',step.note)));button.addEventListener('click',step.action);target.appendChild(button);});
     $('flowSummary').textContent=!configured?'先配置成员与协调者':!hasTree?'下一步：构建或导入任务拓扑网':autoDispatchActive?(document.hidden?'窗口在后台 · 自动派工已挂起（切回前台后恢复）':'自适应调度已开启 · 实时流转就绪任务'):'点击任务节点，即可定向委派并生成执行指令';
@@ -565,6 +571,22 @@
   }
 
 
+  async function exportDelivery() {
+    const button=$('exportDeliveryButton');
+    if(button.disabled)return;
+    button.disabled=true;
+    try {
+      const result=await call('export_delivery',{});
+      if(!result.cancelled)toast((result.kind==='summary'?'交付记录已保存到 ':'已验收成果已打包到 ')+result.path);
+    } catch(error){toast(error.message,true);}
+    finally{updateFlowControls();}
+  }
+  function wakeHint(status){
+    if(status==='accepted')return '成员软件已接收，认领后可查看进度。';
+    if(status==='notified')return '已发送提醒，等待成员认领。';
+    if(status==='waiting'||status==='failed')return '等待成员打开对话，可复制该成员的接入指令。';
+    return '';
+  }
   async function exportTreeTemplate() {
     if(!snapshot.forest.roots.length){toast('请先创建或导入任务树，再导出树模板。',true);return;}
     const button=$('exportTreeButton');if(button&&button.disabled)return;if(button)button.disabled=true;
@@ -3890,9 +3912,8 @@
       if(action==='submit_leaf_result'){
         toast(data?.submission_state==='awaiting_audit'?'成果已提交，等待独立审核。':'成果已按“操作人代录”写入正式回执。');
       }else{
-        toast(action==='checkpoint_leaf'?'断点已保存。':action==='claim_leaf'?'任务已由 '+memberName(payload.agent)+' 在当前工作台认领。':action==='handoff_leaf'?'任务已交回待接手。':action==='dispatch_leaf'?'任务已投递到 '+memberName(data?.dispatched_to)+' 信箱。':'操作已写入正式总线。');
+        toast(action==='checkpoint_leaf'?'断点已保存。':action==='claim_leaf'?'任务已由 '+memberName(payload.agent)+' 在当前工作台认领。':action==='handoff_leaf'?'任务已交回待接手。':action==='dispatch_leaf'?'任务已投递到 '+memberName(data?.dispatched_to)+' 信箱。'+wakeHint(data?.wake_status):'操作已写入正式总线。');
       }
-      if(data?.wake_status==='failed')toast(data.wake_error||'任务已派发，但未能通知成员；请在该成员对话里提醒它查看信箱。',true);
       return data;
     }
     catch(error){toast(error.message,true);}finally{button.disabled=!online;}
@@ -4012,7 +4033,7 @@
     const content=openDialog('项目与团队设置','项目流程 · 01'),form=el('form','settings-form'),config=snapshot.config;
     const directories=el('section');append(directories,el('h3','','两处目录，一个项目'),el('p','','控制目录保存任务、信箱和记忆；业务成果可以保存到另一块磁盘。'));
     const workspace=field('控制目录',config.workspace||snapshot.project.workspace),output=field('业务产出目录',config.output_root||snapshot.project.output_root||'.');
-    [[workspace,'choose_workspace'],[output,'choose_output']].forEach(([item,action])=>{const row=el('div','path-field'),browse=el('button','button small','选择');browse.type='button';browse.disabled=!online;browse.addEventListener('click',async()=>{browse.disabled=true;try{const data=await call(action,{});if(action==='choose_workspace'){if(data&&!data.cancelled&&data.config){setSnapshot(data);closeDialog();requestAnimationFrame(()=>{fit();});toast(`🎉 已切换至新工作空间：${projectName()}，专属任务树已就绪！开始新任务。`);}return;}const path=typeof data==='string'?data:data?.path||data?.workspace||data?.output_root;if(path)item.input.value=path;}catch(error){toast(error.message,true);}finally{browse.disabled=!online;}});item.wrapper.removeChild(item.input);append(row,item.input,browse);item.wrapper.appendChild(row);directories.appendChild(item.wrapper);});
+    [[workspace,'choose_workspace'],[output,'choose_output']].forEach(([item,action])=>{const row=el('div','path-field'),browse=el('button','button small','选择');browse.type='button';browse.disabled=!online;browse.addEventListener('click',async()=>{browse.disabled=true;try{const data=await call(action,{});if(action==='choose_workspace'){if(data&&!data.cancelled&&data.config){setSnapshot(data);if(options.fromQuickstart)showSettings(options);else closeDialog();requestAnimationFrame(()=>{fit();});toast(`🎉 已切换至新工作空间：${projectName()}，专属任务树已就绪！开始新任务。`);}return;}const path=typeof data==='string'?data:data?.path||data?.workspace||data?.output_root;if(path)item.input.value=path;}catch(error){toast(error.message,true);}finally{browse.disabled=!online;}});item.wrapper.removeChild(item.input);append(row,item.input,browse);item.wrapper.appendChild(row);directories.appendChild(item.wrapper);});
     const team=el('section');append(team,el('h3','','成员与组长'),el('p','','成员平级协作。组长负责规划、路由与汇总；启用入口不代表执行能力已经验证。'));
     const rows=el('div','settings-members'),rowData=[],director=el('select');director.setAttribute('aria-label','组长');
     const supervision=config.supervision||{strict_supervision:false,designated_auditor:'',checks:[]};
@@ -4085,7 +4106,7 @@
     });
     append(gcRow,gcScanBtn,gcApplyBtn);append(gcSection,gcStatus,gcRow);
     const actions=el('div','settings-actions'),note=el('p','',online?'保存后可为各成员生成一次初始接入指令。':'当前为只读预览，设置不会保存。'),save=el('button','button primary','保存团队与流程');save.type='submit';save.disabled=!online;append(actions,note,save);append(form,directories,team,allocation,auditDetails,gcSection,actions);
-    form.addEventListener('submit',async event=>{event.preventDefault();if(rowData.some(row=>row.enabled.checked&&!row.id.value.trim()))return toast('新成员需要填写高级信息中的唯一标识。',true);const members=rowData.map(row=>({id:row.id.value.trim(),display_name:row.name.value.trim()||row.id.value.trim(),enabled:row.enabled.checked,communication_mode:row.mode.value})).filter(m=>m.id);if(!workspace.input.value.trim())return toast('请填写项目控制目录。',true);if(new Set(members.map(m=>m.id)).size!==members.length)return toast('成员唯一标识不能重复。',true);if(!members.some(m=>m.id===director.value.trim()&&m.enabled))return toast('组长需要是一个已启用的成员。',true);let auditChecks;try{auditChecks=JSON.parse(checksInput.value||'[]');if(!Array.isArray(auditChecks))throw new Error();}catch{return toast('复核命令清单需要是合法的 JSON 数组。',true);}const supervisionPayload={strict_supervision:auditEnabled.checked,designated_auditor:auditorSelect.value||'',checks:auditChecks};save.disabled=true;stopAutomaticDispatch();try{const data=await call('configure',{workspace:workspace.input.value.trim(),output_root:output.input.value.trim()||'.',coordinator:director.value.trim(),members,assignment_mode:allocationSelect.value,supervision:supervisionPayload});if(data?.forest){setSnapshot(data);void ensureProjectGuide(data.project);}else await refresh();closeDialog();toast(data?.workflow_ready===false?'项目设置已保存，但接入工作流尚未准备：'+(data.workflow_error||'请检查原文件并重新保存。'):'项目设置已保存。下一步建立任务树，再生成成员初始指令。',data?.workflow_ready===false);}catch(error){toast(error.message,true);save.disabled=!online;}});content.appendChild(form);
+    form.addEventListener('submit',async event=>{event.preventDefault();if(rowData.some(row=>row.enabled.checked&&!row.id.value.trim()))return toast('新成员需要填写高级信息中的唯一标识。',true);const members=rowData.map(row=>({id:row.id.value.trim(),display_name:row.name.value.trim()||row.id.value.trim(),enabled:row.enabled.checked,communication_mode:row.mode.value})).filter(m=>m.id);if(!workspace.input.value.trim())return toast('请填写项目控制目录。',true);if(new Set(members.map(m=>m.id)).size!==members.length)return toast('成员唯一标识不能重复。',true);if(!members.some(m=>m.id===director.value.trim()&&m.enabled))return toast('组长需要是一个已启用的成员。',true);let auditChecks;try{auditChecks=JSON.parse(checksInput.value||'[]');if(!Array.isArray(auditChecks))throw new Error();}catch{return toast('复核命令清单需要是合法的 JSON 数组。',true);}const supervisionPayload={strict_supervision:auditEnabled.checked,designated_auditor:auditorSelect.value||'',checks:auditChecks};save.disabled=true;stopAutomaticDispatch();try{const data=await call('configure',{workspace:workspace.input.value.trim(),output_root:output.input.value.trim()||'.',coordinator:director.value.trim(),members,assignment_mode:allocationSelect.value,supervision:supervisionPayload});if(data?.forest){setSnapshot(data);void ensureProjectGuide(data.project);}else await refresh();closeDialog();toast(data?.workflow_ready===false?'项目设置已保存，但接入工作流尚未准备：'+(data.workflow_error||'请检查原文件并重新保存。'):'项目设置已保存。下一步建立任务树，再生成成员初始指令。',data?.workflow_ready===false);if(options.fromQuickstart&&data?.workflow_ready!==false)showTreeImporter();}catch(error){toast(error.message,true);save.disabled=!online;}});content.appendChild(form);
     if(options.expandSupervision)requestAnimationFrame(()=>{if(!auditDetails.open)return;auditDetails.scrollIntoView({block:'nearest',behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches?'auto':'smooth'});auditDetails.querySelector('summary')?.focus({preventScroll:true});});
   }
   function recordsFrom(data,view) {if(Array.isArray(data))return data;if(!data||typeof data!=='object')return[];for(const key of [view,'items','records','events','skills','candidates','tasks','entries','results','actions','issues','profiles','installed'])if(Array.isArray(data[key]))return data[key];return Object.keys(data).length?[data]:[];}
@@ -4765,14 +4786,14 @@
 
   function showQuickstartTour() {
     const content = openDialog('新项目快速上手向导', '入门指南');
-    append(content, el('p', 'panel-intro', '欢迎来到 AgentBus！AgentBus 采用本地优先、契约驱动的平级多智能体协同流水线。'));
+    append(content, el('p', 'panel-intro', '让你已有的 AI 软件一起做一个项目。成员在自己的聊天里使用已有额度，通过工程文件交接任务和成果，无需模型 API 密钥。'));
 
     const stepsContainer = el('div', 'quickstart-tour-steps');
     const tourItems = [
-      { num: '1', title: '配置工作空间与双目录隔离', desc: '在【文件 -> 更换控制目录/产出目录】中设定控制与业务产出物理隔离，保障代码资产安全。' },
-      { num: '2', title: '导入或追加任务树契约', desc: '通过【文件 -> 导入任务树模板】或按 Alt+N 快速追加节点，构建完整的 DAG 拓扑网。' },
-      { num: '3', title: '智能体接入与流水线调度', desc: '在左侧边栏选定成员，点击【生成初始接入指令】，智能体将按信箱队列自主认领推进。' },
-      { num: '4', title: '实时监控与 4K 超清长图导出', desc: '随时按 Alt+L 开启血缘探照灯，按 Alt+T 贴上便签，或一键导出 4K 超清拓扑图交付汇报。' }
+      { num: '1', title: '选择工程和小组', desc: '选择项目文件夹，勾选你使用的 AI 软件，指定一位组长。' },
+      { num: '2', title: '准备任务树', desc: '导入和组长商量好的任务树，或选择内置模板。' },
+      { num: '3', title: '让成员开始工作', desc: '把成员接入指令发到对应软件的聊天。领取任务后，工作台会显示进度。' },
+      { num: '4', title: '取走项目成果', desc: '所有任务交付后，在「文件」里选择「导出已验收成果」。' }
     ];
 
     tourItems.forEach(item => {
@@ -4787,11 +4808,10 @@
     content.appendChild(stepsContainer);
 
     const actions = el('div', 'dialog-action-row');
-    const startBtn = el('button', 'button primary', '开始使用工作台');
+    const startBtn = el('button', 'button primary', '选择工程和成员');
     startBtn.type = 'button';
     startBtn.addEventListener('click', () => {
-      closeDialog();
-      toast('新手向导已完成，尽情开启多智能体高效协同！');
+      showSettings({fromQuickstart:true});
     });
     const fitBtn = el('button', 'button', '全景适屏');
     fitBtn.type = 'button';
@@ -4922,6 +4942,7 @@
   $('themeButton').addEventListener('click',()=>{document.body.dataset.theme=document.body.dataset.theme==='dark'?'light':'dark';try{localStorage.setItem('agentbus-theme',document.body.dataset.theme);}catch{}$('themeButton').setAttribute('aria-label',document.body.dataset.theme==='dark'?'切换为浅色主题':'切换为深色主题');});
   try{document.body.dataset.theme=localStorage.getItem('agentbus-theme')==='dark'?'dark':'light';}catch{document.body.dataset.theme='light';}
   $('stopButton').addEventListener('click',()=>{stopAutomaticDispatch();mutate($('stopButton'),snapshot.forest.stopped?'resume':'stop',{});});
+  $('exportDeliveryButton').addEventListener('click',exportDelivery);
   $('importTreeButton').addEventListener('click',showTreeImporter);$('exportTreeButton').addEventListener('click',exportTreeTemplate);if($('exportHandoverButton'))$('exportHandoverButton').addEventListener('click',exportHandover);
   if($('exportBackupButton'))$('exportBackupButton').addEventListener('click',exportBackup);
   if($('restoreBackupButton'))$('restoreBackupButton').addEventListener('click',restoreBackup);

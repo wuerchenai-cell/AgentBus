@@ -488,6 +488,8 @@ class TaskForestTests(unittest.TestCase):
             self.bus.commit_result("alpha", original, ticket, body="late old output")
         new = self.forest.claim_leaf("first", "beta")
         self.assertEqual(new.body, original.body)
+        self.assertEqual(new.handoff_note, "Start at first output")
+        self.assertEqual(new.handoff_reason, "quota exhausted; continue from output")
         self.assertEqual(new.deadline_ts, original.deadline_ts)
         self.assertEqual(new.attempt, original.attempt + 1)
         self.assertEqual(jobs._load(self.cfg, original.job_id)["tasks"][0], job_before["tasks"][0])

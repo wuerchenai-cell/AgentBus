@@ -125,7 +125,7 @@ class WebBridge:
             'load_priorities': self._load_priorities,
             'save_priorities': self._save_priorities,
             'tree_templates': self._tree_templates, 'export_tree': self._export_tree,
-            'export_handover': self._export_handover,
+            'export_handover': self._export_handover, 'export_delivery': self._export_delivery,
             'import_tree': self._import_tree,
             'checkpoint_leaf': self._checkpoint_leaf, 'handoff_leaf': self._handoff_leaf, 'takeover_leaf': self._takeover_leaf, 'takeover_capsule': self._takeover_capsule,
             'pass_leaf': self._pass_leaf, 'reset_leaf': self._reset_leaf, 'diagnose_deadlock': self._diagnose_deadlock,
@@ -1377,6 +1377,25 @@ class WebBridge:
             raise ValueError('卡片优先级数据无效或未能保存（格式/条目超限）')
         return {'saved': True, 'priorities': load_priorities(workspace)}
 
+    @staticmethod
+    def _wake_after_dispatch(service, member, task_id, **options):
+        outcome = service.trigger_for_member(member, task_id, **options)
+        status = outcome.get('status')
+        if status == 'ok':
+            # The head of a busy member's FIFO may be an older assignment.
+            if outcome.get('notified_task_id') != task_id:
+                return 'waiting'
+            submitted = outcome.get('submit_status')
+            if submitted == 'accepted' and outcome.get('accepted_by_host') is True:
+                return 'accepted'
+            if submitted == 'notified':
+                return 'notified'
+            if submitted == 'queued':
+                return 'waiting'
+        if status in ('duplicate', 'queued', 'idle', 'no_bound_contact', 'no_ready_task'):
+            return 'waiting'
+        return 'failed'
+
     def _dispatch_leaf(self, payload):
         forest, identity, agent = self._leaf_context(payload, ('leaf_id', 'id', 'agent', 'caller'))
         with task_lock(forest.root, 'task-forest', 'structure'):
@@ -1394,8 +1413,7 @@ class WebBridge:
         result['automatic_execution'] = False
         try:
             from .trigger.service import TriggerDeliveryService
-            TriggerDeliveryService(forest.cfg.workspace).trigger_for_member(message.to, message.id)
-            result['wake_status'] = 'notified'
+            result['wake_status'] = self._wake_after_dispatch(TriggerDeliveryService(forest.cfg.workspace), message.to, message.id)
         except Exception as exc:
             # Task is dispatched on disk; only the optional wake-up failed.
             result['wake_status'] = 'failed'
@@ -1474,10 +1492,11 @@ class WebBridge:
             tds = TriggerDeliveryService(cfg.workspace)
             tds.reset_circuit_breaker()
             for item in assignments:
-                tds.trigger_for_member(item['agent'], item['task_id'], count_hop=False)
+                item['wake_status'] = self._wake_after_dispatch(tds, item['agent'], item['task_id'], count_hop=False)
             if assignments:
                 tds.record_hop()
-            result['wake_status'] = 'notified' if assignments else 'none'
+            statuses = {item['wake_status'] for item in assignments}
+            result['wake_status'] = (next(iter(statuses)) if len(statuses) == 1 else 'mixed' if statuses else 'none')
         except Exception as exc:
             result['wake_status'] = 'failed'
             result['wake_error'] = f'任务已派发，但未能通知成员：{exc}'[:300]
@@ -1495,7 +1514,7 @@ class WebBridge:
         return {'templates': [{key: item[key] for key in ('id', 'title', 'description')}
                               for item in builtin_templates()]}
 
-    def _file_dialog(self, *, saving=False, member_icon=False, markdown=False):
+    def _file_dialog(self, *, saving=False, member_icon=False, markdown=False, delivery=False):
         if self._window is None:
             raise ValueError('当前没有原生窗口；请明确选择一个任务树模板文件路径')
         import webview
@@ -1505,6 +1524,8 @@ class WebBridge:
             kind = getattr(webview, 'SAVE_DIALOG' if saving else 'OPEN_DIALOG')
         if markdown:
             file_types = ('Markdown 文档 (*.md)',)
+        elif delivery:
+            file_types = ('已验收成果 (*.zip)',)
         elif member_icon:
             file_types = ('Windows 应用程序 (*.exe)',)
         else:
@@ -1512,7 +1533,7 @@ class WebBridge:
         kwargs = {'allow_multiple': False, 'directory': str(self._workspace),
                   'file_types': file_types}
         if saving:
-            kwargs['save_filename'] = '项目进度与交付归档.md' if markdown else 'project.tree.json'
+            kwargs['save_filename'] = '项目进度与交付归档.md' if markdown else ('已验收成果.zip' if delivery else 'project.tree.json')
         result = self._window.create_file_dialog(kind, **kwargs)
         return (result[0] if isinstance(result, (tuple, list)) else result) if result else None
 
@@ -1588,6 +1609,32 @@ class WebBridge:
             raise ValueError('归档必须是公开本地目录中的 .md 文件，不能进入控制目录或私有目录')
         parent = _directory(path.parent)
         return PublicFiles(parent).checked(path.name)
+
+    def _export_delivery(self, payload):
+        from .cli import export_verified_delivery
+        self._fields(payload, ('path',))
+        cfg = self._cfg()
+        forest = TaskForest(cfg)
+        leaves = forest.snapshot().get('leaves', [])
+        if not leaves or any(leaf.get('state') != 'delivered' for leaf in leaves):
+            raise ValueError('还有任务尚未交付。全部通过验收后即可导出。')
+        files = {item['path'] for leaf in leaves for item in leaf.get('artifacts', [])}
+        selected = payload.get('path') or self._file_dialog(saving=True, delivery=True, markdown=not files)
+        if selected is None:
+            return {'cancelled': True}
+        path = Path(selected)
+        suffix = '.zip' if files else '.md'
+        if not path.is_absolute() or path.suffix.casefold() != suffix:
+            raise ValueError(f'请选择 {suffix} 文件的完整保存位置')
+        target = PublicFiles(_directory(path.parent)).checked(path.name)
+        if target.name.rstrip(' .').casefold() in _PRIVATE:
+            raise ValueError('请选择公开的成果保存位置')
+        lines = []
+        code = export_verified_delivery(cfg, forest, export_target=target if files else None,
+            summary_target=None if files else target, emit=lines.append)
+        if code:
+            raise ValueError('未生成交付文件。' + '\\n'.join(lines[-5:]))
+        return {'cancelled': False, 'path': str(target), 'kind': 'archive' if files else 'summary'}
 
     def _export_handover(self, payload):
         """Render the live forest as a Markdown handover digest.

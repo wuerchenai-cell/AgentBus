@@ -180,8 +180,11 @@ class IndexFreshnessTests(_Forest):
         self.tree([("a", "A"), ("b", "B")])
         for name in ("a", "b"):
             self.legacy_parallel_claim(name, "beta")
-        first = json.dumps(self.forest.snapshot(), sort_keys=True, ensure_ascii=False)
-        second = json.dumps(self.forest.snapshot(), sort_keys=True, ensure_ascii=False)
+        times = ("2026-11-19T14:49:43+08:00", "2026-11-19T14:49:44+08:00")
+        with patch("agentbus.task_tree.now_iso", side_effect=times):
+            first = self.forest.snapshot()
+            second = self.forest.snapshot()
+        self.assertEqual(times, (first.pop("generated_at"), second.pop("generated_at")))
         self.assertEqual(first, second, "同一状态的两次快照必须一致（索引不影响结果）")
 
 

@@ -120,7 +120,9 @@ class TestBackgroundDispatchTruth(unittest.TestCase):
         self.assertIn("后台挂起中", app_js)
 
         # 4. Truthful toast without claiming model activation
-        self.assertIn("项就绪任务至成员信箱（纯文件事件，不自动调用外部模型）", app_js)
+        self.assertIn("项任务至成员信箱。", app_js)
+        self.assertIn("发送成员接入指令", app_js)
+        self.assertIn("已发送提醒，等待成员认领。", app_js)
 
 
 if __name__ == '__main__':

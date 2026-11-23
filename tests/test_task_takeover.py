@@ -93,6 +93,7 @@ class TestTaskTakeover(unittest.TestCase):
         claim_res = self.forest.claim_leaf("LEAF-TEST-001", "codex")
         ticket = captured_ticket(claim_res)
         self.bus.heartbeat("codex", claim_res, ticket, note="test stale worker started")
+        self.forest.checkpoint_leaf("LEAF-TEST-001","codex","核对第二段",ticket=ticket)
         snap = self.forest.snapshot()
         leaf = self.forest._leaf(snap, "LEAF-TEST-001")
         self.assertEqual(leaf["owner"], "codex")
@@ -120,6 +121,10 @@ class TestTaskTakeover(unittest.TestCase):
         snap_after = self.forest.snapshot()
         leaf_after = self.forest._leaf(snap_after, "LEAF-TEST-001")
         self.assertEqual(leaf_after["owner"], "antigravity")
+        self.assertIn("核对第二段", leaf_after["handoff"])
+        self.assertIn("核对第二段", self.bus.find_message(leaf_after["task_id"]).work_brief)
+        self.assertIn("核对第二段", self.forest.generate_takeover_capsule(leaf_after, "antigravity")["prompt"])
+
         self.assertEqual(leaf_after["state"], "queued")
         self.assertEqual(leaf_after["location"], "ready")
         self.assertTrue(leaf_after["claimable"])

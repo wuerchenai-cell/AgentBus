@@ -153,13 +153,30 @@ class Message:
     supervision: dict[str, Any] = field(default_factory=dict)
     schema_version: int = SCHEMA_VERSION
 
+    # Continuation context travels alongside the immutable task intent.
+    handoff_note: str = ""
+    handoff_reason: str = ""
+
+    @property
+    def work_brief(self) -> str:
+        parts = [self.body]
+        if self.handoff_note:
+            parts.append(f"工作断点：{self.handoff_note}")
+        if self.handoff_reason:
+            parts.append(f"换人原因：{self.handoff_reason}")
+        return "\n\n".join(parts)
+
     @property
     def awaiting_audit(self) -> bool:
         return (self.type == "result" and isinstance(self.supervision, dict)
                 and self.supervision.get("state") == "awaiting_audit")
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        data = asdict(self)
+        for key in ("handoff_note", "handoff_reason"):
+            if not data[key]:
+                del data[key]
+        return data
 
     @staticmethod
     def from_dict(d: dict[str, Any], strict: bool = False) -> "Message":
